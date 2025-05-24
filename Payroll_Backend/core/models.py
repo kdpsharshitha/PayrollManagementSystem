@@ -3,7 +3,7 @@ from django.utils import timezone
 import calendar
 from datetime import datetime
 
-class Employee(models.Model):
+class Employee(models.Model):#models
 
     GENDER_CHOICES = [("M", "Male"), ("F", "Female"), ("O", "Other")]
     EMPLOYMENT_TYPE_CHOICES = [("full_time", "Full Time"), ("part_time", "Part Time")]
