@@ -38,7 +38,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'core',
+    'employee',
+    'attendance',
+    'leavedetails',
+    'payroll',
+    'leave_requests',
     'corsheaders',
 ]
 
@@ -81,7 +85,7 @@ WSGI_APPLICATION = 'payroll_management_system.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'payroll_management_db',
+        'NAME': 'payroll_management',
         'USER': 'postgres',  
         'PASSWORD': 'Harshi@25',  
         'HOST': 'localhost',

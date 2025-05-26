@@ -1,29 +1,19 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 
-export default function HomeDashboard() {
+export default function Home() {
   const router = useRouter();
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+
       <Text style={styles.title}>Payroll Management System</Text>
-      <Text style={styles.subtitle}>Welcome to the Dashboard</Text>
 
-      <Pressable style={styles.card} onPress={() => router.push('/employees')}>
-        <Text style={styles.cardText}>View Employees</Text>
-      </Pressable>
-
-      <Pressable style={styles.card} onPress={() => router.push('/payroll')}>
-        <Text style={styles.cardText}>Payroll Records</Text>
-      </Pressable>
-
-      <Pressable style={styles.card} onPress={() => router.push('/attendance')}>
-        <Text style={styles.cardText}>Attendance</Text>
-      </Pressable>
-
-      <Pressable style={styles.card} onPress={() => router.push('/leave')}>
-        <Text style={styles.cardText}>Leave Requests</Text>
-      </Pressable>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
+        <Text style={styles.buttonText}>Get Started</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -31,33 +21,35 @@ export default function HomeDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111827',
+    backgroundColor: '#0F172A', // Dark blue-gray (professional background)
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: 24,
   },
   title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 10,
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#E2E8F0', // Soft light gray
+    marginBottom: 70,
+    textAlign: 'center',
+    letterSpacing: 1.1,
+    lineHeight: 40,
   },
-  subtitle: {
+  button: {
+    backgroundColor: '#2563EB', // Professional blue
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderRadius: 32,
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  buttonText: {
     fontSize: 18,
-    color: '#cbd5e1',
-    marginBottom: 20,
-  },
-  card: {
-    width: '90%',
-    backgroundColor: '#1f2937',
-    padding: 15,
-    marginVertical: 8,
-    borderRadius: 10,
-    borderColor: '#3b82f6',
-    borderWidth: 1,
-  },
-  cardText: {
-    color: '#f1f5f9',
-    fontSize: 16,
+    fontWeight: '600',
+    color: '#F8FAFC', // Very light blue-white text
+    letterSpacing: 0.8,
   },
 });
