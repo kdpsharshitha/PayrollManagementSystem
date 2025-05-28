@@ -1,11 +1,6 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import EmployeeViewSet
-
-router = DefaultRouter()
-router.register(r'employees', EmployeeViewSet)
-
+from django.urls import path
+from .views import login
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path("login/", login, name="login"),  # ✅ Login using email# ✅ Create new user
 ]

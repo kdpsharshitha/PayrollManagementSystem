@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-kqrfs3ay))5u++5gz44-m26yasl*5k!z*&mk-x47l^47ba3x0*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['192.168.17.49', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -86,8 +86,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'payroll_management',
-        'USER': 'postgres',  
-        'PASSWORD': 'Harshi@25',  
+        'USER': 'myuser',  
+        'PASSWORD': 'Sunny@123',  
         'HOST': 'localhost',
         'PORT': '5432',
     }
@@ -134,3 +134,28 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# settings.py
+
+AUTH_USER_MODEL = 'employee.Employee'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # ✅ JWT Authentication
+        'rest_framework.authentication.SessionAuthentication',  # ✅ Session-based Authentication
+        'rest_framework.authentication.TokenAuthentication',  # ✅ Token-based Authentication
+    ],
+
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',  # ✅ Only authenticated users can access views
+    ],
+
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',  # ✅ Ensure API returns JSON responses
+    ],
+
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',  # ✅ Ensure API handles JSON requests
+    ],
+}
+
