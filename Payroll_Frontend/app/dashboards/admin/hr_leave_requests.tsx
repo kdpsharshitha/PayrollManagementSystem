@@ -11,7 +11,7 @@ import {
   StyleSheet,
 } from "react-native";
 import axios from "axios";
-import { getAccessToken } from "../../(tabs)/auth"; // Adjust this path if needed
+import { getAccessToken } from "../../auth"; // Adjust this path if needed
 
 interface LeaveRequest {
   id: number;

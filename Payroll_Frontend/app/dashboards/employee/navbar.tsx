@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 export default function Navbar() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
+  const [leavesDropdownVisible, setLeavesDropdownVisible] = useState(false);
   const router = useRouter();
 
   const handleNavigate = (path: string) => {
@@ -20,7 +21,7 @@ export default function Navbar() {
             <Pressable  onPress={() => setMenuVisible(!menuVisible)}>
                 <Ionicons name="menu" size={28} color="#fff" />  
             </Pressable>
-            <Text style={styles.adminText}>Admin</Text>
+            <Text style={styles.adminText}>Employee</Text>
         </View>
         
         <Pressable onPress={() => setProfileMenuVisible(!profileMenuVisible)}>
@@ -30,17 +31,24 @@ export default function Navbar() {
 
       {menuVisible && (
         <View style={styles.menu}>
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/add_new_employee")}>
-            <Text style={styles.menuItem}>Add New Employee</Text>
+          <Pressable onPress={() => handleNavigate("/dashboards/employee/my_attendance")}>
+            <Text style={styles.menuItem}>My Attendance</Text>
           </Pressable>
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/view_mng_employees")}>
-            <Text style={styles.menuItem}>View & Manage Employee Details</Text>
+          <Pressable onPress={() => setLeavesDropdownVisible(!leavesDropdownVisible)}>
+            <Text style={styles.menuItem}>My Leaves ▾</Text>
           </Pressable>
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/hr_leave_requests")}>
-            <Text style={styles.menuItem}>Manage HR Leave Requests</Text>
-          </Pressable>
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/mng_payroll")}>
-            <Text style={styles.menuItem}>Manage Payroll</Text>
+          {leavesDropdownVisible && (
+            <View style={styles.dropdown}>
+              <Pressable onPress={() => handleNavigate("/dashboards/employee/request_leave")}>
+                <Text style={styles.dropdownItem}>Request Leave</Text>
+              </Pressable>
+              <Pressable onPress={() => handleNavigate("/dashboards/employee/leave_status")}>
+                <Text style={styles.dropdownItem}>Leave Status</Text>
+              </Pressable>
+            </View>
+          )}
+          <Pressable onPress={() => handleNavigate("/dashboards/employee/my_payslips")}>
+            <Text style={styles.menuItem}>My Payslips</Text>
           </Pressable>
         </View>
       )}
@@ -115,5 +123,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 15,
     zIndex: 10,
+  },
+  dropdown: {
+    paddingLeft: 20,
+    backgroundColor: '#fff',
+  },
+  dropdownItem: {
+    fontSize: 14,
+    paddingVertical: 8,
+    color: '#22186F',
   },
 });

@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 
-export default function AdminHome() {
+export default function EmployeeHome() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome!!</Text>
