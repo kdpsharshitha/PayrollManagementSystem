@@ -7,7 +7,7 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+      <StatusBar barStyle="light-content" backgroundColor='#22186F' />
 
       <Text style={styles.title}>Payroll Management System</Text>
 
@@ -21,7 +21,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A', // Dark blue-gray (professional background)
+    backgroundColor: '#22186F', 
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
@@ -29,8 +29,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '700',
-    color: '#E2E8F0', // Soft light gray
-    marginBottom: 70,
+    color: 'white', 
+    marginBottom: 50,
     textAlign: 'center',
     letterSpacing: 1.1,
     lineHeight: 40,
@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#F8FAFC', // Very light blue-white text
+    color: 'white', 
     letterSpacing: 0.8,
   },
 });
