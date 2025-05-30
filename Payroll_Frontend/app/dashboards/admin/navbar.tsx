@@ -33,7 +33,7 @@ export default function Navbar() {
           <Pressable onPress={() => handleNavigate("/dashboards/admin/add_new_employee")}>
             <Text style={styles.menuItem}>Add New Employee</Text>
           </Pressable>
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/view_mng_employees")}>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/view_mng_emp_details")}>
             <Text style={styles.menuItem}>View & Manage Employee Details</Text>
           </Pressable>
           <Pressable onPress={() => handleNavigate("/dashboards/admin/hr_leave_requests")}>

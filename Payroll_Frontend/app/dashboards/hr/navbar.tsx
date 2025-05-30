@@ -21,7 +21,7 @@ export default function Navbar() {
             <Pressable  onPress={() => setMenuVisible(!menuVisible)}>
                 <Ionicons name="menu" size={28} color="#fff" />  
             </Pressable>
-            <Text style={styles.adminText}>Employee</Text>
+            <Text style={styles.adminText}>HR</Text>
         </View>
         
         <Pressable onPress={() => setProfileMenuVisible(!profileMenuVisible)}>
@@ -31,8 +31,8 @@ export default function Navbar() {
 
       {menuVisible && (
         <View style={styles.menu}>
-          <Pressable onPress={() => handleNavigate("/dashboards/hr/view_emp_details")}>
-            <Text style={styles.menuItem}>View Employee Details</Text>
+          <Pressable onPress={() => handleNavigate("/dashboards/hr/view_mng_emp_details")}>
+            <Text style={styles.menuItem}>View & Manage Employee Details</Text>
           </Pressable>
           <Pressable onPress={() => handleNavigate("/dashboards/hr/mng_attendance")}>
             <Text style={styles.menuItem}>Manage Attendance</Text>

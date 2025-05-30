@@ -54,7 +54,7 @@ class Employee(AbstractBaseUser, PermissionsMixin):
     employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, default='full_time')
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='employee')
     designation = models.CharField(max_length=50, null=True, blank=True)
-    date_joined = models.DateField(auto_now_add=True)
+    date_joined = models.DateField()
     fee_per_month = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     pay_structure = models.CharField(max_length=10, choices=PAY_STRUCTURE_CHOICES, default='fixed')
 

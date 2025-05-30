@@ -35,7 +35,7 @@ interface FormData {
 }
 
 const initialFormData: FormData = {
-  id: "",
+    id: "",
     name: "",
     email: "",
     password: "",
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontSize: 24,
-    fontWeight: "700",
+    fontWeight: "bold",
     color: "#22186F",
     marginBottom: 20,
     textAlign: "center",
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   multiline: {
-    height: 80,
+    height: 100,
     textAlignVertical: "top",
   },
   pickerWrapper: {

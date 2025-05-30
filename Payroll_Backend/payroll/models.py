@@ -12,7 +12,6 @@ class Payroll(models.Model):
         ('NA', 'Not Applicable(NA)')
     ]
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='payrolls')
-    # this will create employee_id field in the DB
     fee_per_month = models.DecimalField(max_digits=10, decimal_places=2)
     pay_structure = models.CharField(max_length=10)
     month = models.DateField(help_text="Month and year")
