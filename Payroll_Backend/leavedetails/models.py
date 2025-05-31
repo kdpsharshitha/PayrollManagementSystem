@@ -1,6 +1,6 @@
 from django.db import models
 import calendar
-from datetime import datetime
+from datetime import datetime, timedelta
 from employee.models import Employee
 from attendance.models import Attendance
 
@@ -40,9 +40,27 @@ class LeaveDetails(models.Model):
         half_leaves = records.filter(status='Half Leave').count()
         sick_leaves = records.filter(status='Sick Leave').count()
         holidays = records.filter(status='Holiday').count()
-        total_leaves = leaves + 0.5 * half_leaves
 
-        self.working_days = num_days - holidays
+        sandwich_unpaid_leaves = 0
+        # Detect sandwich holidays
+        sorted_dates = sorted(records.values_list('date', 'status'))
+
+        for i in range(1, len(sorted_dates) - 1):
+            prev_date, prev_status = sorted_dates[i - 1]
+            curr_date, curr_status = sorted_dates[i]
+            next_date, next_status = sorted_dates[i + 1]
+
+            if curr_status == 'Holiday':
+                # Check if this holiday is between two leave or absent days
+                if ((prev_status in ['Leave', 'Absent']) and
+                    (next_status in ['Leave', 'Absent']) and
+                    (prev_date == curr_date - timedelta(days=1)) and
+                    (next_date == curr_date + timedelta(days=1))):
+                        sandwich_unpaid_leaves += 1
+
+        total_leaves = leaves + 0.5 * half_leaves + sandwich_unpaid_leaves
+
+        self.working_days = num_days - holidays + sandwich_unpaid_leaves
 
         if (total_leaves) <= 1:
             self.paid_leaves = total_leaves

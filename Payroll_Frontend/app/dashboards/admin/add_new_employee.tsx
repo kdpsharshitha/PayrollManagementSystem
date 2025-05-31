@@ -13,7 +13,8 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
-import * as SecureStore from 'expo-secure-store';
+//import * as SecureStore from 'expo-secure-store';
+import { getAccessToken } from "../../auth/index";
 
 interface FormData {
   id: string;
@@ -156,7 +157,7 @@ const AddEmployeeScreen = () => {
 
     try {
 
-      const token = await SecureStore.getItemAsync("access_token");  // ✅ Retrieve token
+      const token = await getAccessToken();  // ✅ Retrieve token
       if (!token) {
         showAlert("Authentication Error", "You are not logged in.");
         return;

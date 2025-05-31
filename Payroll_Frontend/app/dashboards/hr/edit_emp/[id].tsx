@@ -13,8 +13,9 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
+//import * as SecureStore from "expo-secure-store";
+import { getAccessToken } from "../../../auth/index";
 
 interface FormData {
   id: string;  
@@ -45,7 +46,7 @@ const EditEmployeeScreen = () => {
   useEffect(() => {
     const fetchEmployee = async () => {
       try {
-        const token = await SecureStore.getItemAsync("access_token");
+        const token = await getAccessToken();
         const res = await fetch(`http://192.168.1.6:8000/api/employee/employees/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -123,7 +124,7 @@ const EditEmployeeScreen = () => {
     if (!validateForm()) return;
 
     try {
-      const token = await SecureStore.getItemAsync("access_token");
+      const token = await getAccessToken();
       const res = await fetch(`http://192.168.1.6:8000/api/employee/employees/${id}/`, {
         method: "PATCH",
         headers: {

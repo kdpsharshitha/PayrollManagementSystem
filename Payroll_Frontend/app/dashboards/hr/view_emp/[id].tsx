@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, StyleSheet, ScrollView, Alert, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
+//import * as SecureStore from "expo-secure-store";
+import { getAccessToken } from "../../../auth/index";
+
 
 type Employee = {
   id: string;
@@ -36,7 +38,7 @@ export default function ViewEmployee() {
 
   const fetchEmployeeDetails = async (empId: string) => {
     try {
-      const token = await SecureStore.getItemAsync("access_token");
+      const token = await getAccessToken();
       if (!token) {
         Alert.alert("Authentication Error", "You are not logged in.");
         return;

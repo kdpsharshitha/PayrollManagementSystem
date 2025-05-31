@@ -10,7 +10,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons, Feather, MaterialIcons } from "@expo/vector-icons";
-import * as SecureStore from "expo-secure-store";
+//import * as SecureStore from "expo-secure-store";
+import { getAccessToken } from "../../auth/index";
 
 type Employee = {
   id: string;
@@ -32,7 +33,7 @@ export default function EmployeeManagementScreen() {
 
   const fetchEmployees = async () => {
     try {
-      const token = await SecureStore.getItemAsync("access_token");
+      const token = await getAccessToken();
       if (!token) {
         Alert.alert("Authentication Error", "You are not logged in.");
         return;
@@ -61,7 +62,7 @@ export default function EmployeeManagementScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            const token = await SecureStore.getItemAsync("access_token");
+            const token = await getAccessToken();
             if (!token) {
               Alert.alert("Authentication Error", "You are not logged in.");
               return;

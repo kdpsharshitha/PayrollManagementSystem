@@ -6,4 +6,5 @@ urlpatterns = [
     path('list/', views.list_leave_requests_for_approval, name='list_leave_requests'),
     path('myrequest/', views.my_requests, name='my_leave_requests'),
     path('approve/<int:request_id>/', views.update_leave_request_status, name='approve_leave_request'),
+    path('balance/', views.leave_balance, name='leave_balance'),
 ]
