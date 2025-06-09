@@ -31,12 +31,12 @@ yarn-error.*
 *.pem
 
 # local env files
+Payroll_Backend/.env
+.env
+.env.local
 .env*.local
 
 # typescript
 *.tsbuildinfo
-
-# .gitignore
-.env
 
 app-example
