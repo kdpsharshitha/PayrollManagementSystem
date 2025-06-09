@@ -48,9 +48,15 @@ const AdminHrLeaveRequests: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log("API Response:", response.data);
-      const pendingData = response.data.filter(
-        (req: LeaveRequest) => req.status === "pending"
-      );
+
+      // Filter for pending, then sort by created_at descending (most recent first)
+      const pendingData = response.data
+        .filter((req: LeaveRequest) => req.status === "pending")
+        .sort(
+          (a: LeaveRequest, b: LeaveRequest) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
       setLeaveRequests(pendingData);
     } catch (error: any) {
       console.error(
@@ -71,9 +77,15 @@ const AdminHrLeaveRequests: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log("API Response:", response.data);
-      const processedData = response.data.filter(
-        (req: LeaveRequest) => req.status === "approved" || req.status === "rejected"
-      );
+
+      // Filter for approved or rejected, then sort by created_at descending
+      const processedData = response.data
+        .filter((req: LeaveRequest) => req.status === "approved" || req.status === "rejected")
+        .sort(
+          (a: LeaveRequest, b: LeaveRequest) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
       setLeaveRequests(processedData);
     } catch (error: any) {
       console.error(
@@ -107,19 +119,33 @@ const AdminHrLeaveRequests: React.FC = () => {
     if (item.leave_type === "paid") {
       if (item.total_days > 1) {
         const unpaidDays = item.total_days - 1;
-        return `Effective: 1 day Paid, ${unpaidDays} day(s) Unpaid`;
+        return `Effective: 1 day Paid, ${unpaidDays} days Unpaid`;
       }
       return "Effective: 1 day Paid";
     }
     if (item.leave_type === "sick") {
       if (item.total_days > 2) {
         const extra = item.total_days - 2;
-        return `Effective: 2 day(s) Sick, ${extra} day(s) Unpaid`;
+        return `Effective: 2 days Sick, ${extra} days Unpaid`;
       }
-      return `Effective: ${item.total_days} day(s) Sick`;
+      return `Effective: ${item.total_days} days Sick`;
     }
     return "";
   };
+
+  const formatDateTime = (isoString: string): string => {
+  const date = new Date(isoString);
+  const year = date.getFullYear();
+  const month = (`0${date.getMonth() + 1}`).slice(-2);
+  const day = (`0${date.getDate()}`).slice(-2);
+  let hours = date.getHours();
+  const minutes = (`0${date.getMinutes()}`).slice(-2);
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+  const formattedTime = `${hours}:${minutes} ${ampm}`;
+  return `${year}/${month}/${day},${formattedTime}`;
+};
+
 
   const renderRequest = ({ item }: { item: LeaveRequest }) => (
     <View style={styles.itemContainer}>
@@ -148,14 +174,31 @@ const AdminHrLeaveRequests: React.FC = () => {
         <Text style={styles.label}>Description:</Text> {item.description}
       </Text>
       <Text style={styles.itemText}>
-        <Text style={styles.label}>Date of Request:</Text> {item.created_at}
+       <Text style={styles.label}>Date of Request:</Text> {formatDateTime(item.created_at)}
       </Text>
-      <Text style={styles.itemText}>
-        <Text style={styles.label}>Status:</Text> {item.status.toUpperCase()}
-      </Text>
+
+
+      {/* Status with dynamic color */}
+      <View style={styles.statusContainer}>
+        <Text style={styles.label}>Status:</Text>
+        <Text
+          style={[
+            styles.statusText,
+            item.status === "approved"
+              ? styles.statusApproved
+              : item.status === "rejected"
+              ? styles.statusRejected
+              : {}
+          ]}
+        >
+          {" " + item.status.toUpperCase()}
+        </Text>
+      </View>
+
       {(item.leave_type === "paid" || item.leave_type === "sick") && (
         <Text style={styles.breakdownText}>{getBreakdownMessage(item)}</Text>
       )}
+
       {activeTab === "pending" && (
         <View style={styles.buttonContainer}>
           <TouchableOpacity
@@ -177,7 +220,8 @@ const AdminHrLeaveRequests: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>HR Leave Requests </Text>
+      <Text style={styles.header}>HR Leave Requests</Text>
+
       {/* Toggle Buttons */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -185,7 +229,7 @@ const AdminHrLeaveRequests: React.FC = () => {
           onPress={() => setActiveTab("pending")}
         >
           <Text style={[styles.tabText, activeTab === "pending" && styles.activeTabText]}>
-            Pending Requests
+            Pending
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -193,10 +237,11 @@ const AdminHrLeaveRequests: React.FC = () => {
           onPress={() => setActiveTab("processed")}
         >
           <Text style={[styles.tabText, activeTab === "processed" && styles.activeTabText]}>
-            Processed Requests
+            Processed
           </Text>
         </TouchableOpacity>
       </View>
+
       {loading ? (
         <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 20 }} />
       ) : (
@@ -271,6 +316,22 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   label: {
+    fontWeight: "bold",
+  },
+  statusContainer: {
+    flexDirection: "row",
+    marginBottom: 6,
+    alignItems: "center",
+  },
+  statusText: {
+    fontSize: 16,
+  },
+  statusApproved: {
+    color: "green",
+    fontWeight: "bold",
+  },
+  statusRejected: {
+    color: "red",
     fontWeight: "bold",
   },
   breakdownText: {

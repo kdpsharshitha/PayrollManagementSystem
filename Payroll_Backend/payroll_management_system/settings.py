@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-kqrfs3ay))5u++5gz44-m26yasl*5k!z*&mk-x47l^47ba3x0*'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -88,7 +90,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'payroll_management',
         'USER': 'postgres',  
-        'PASSWORD': 'Harshi@25',  
+        'PASSWORD': config('DB_PASSWORD'),  
         'HOST': 'localhost',
         'PORT': '5432',
     }
@@ -129,7 +131,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [ BASE_DIR / "static" ]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -159,7 +162,16 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=1),  # For testing, keep it short
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),  # For testing, keep it short
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     # other settings...
 }
+
+# Email backend configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Or your SMTP provider
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')  # ✅ Replace with your email
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')   # ✅ Use App Password (not your actual Gmail password)
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

@@ -51,7 +51,6 @@ const EditEmployeeScreen = () => {
         const res = await fetch(`http://192.168.1.6:8000/api/employee/employees/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
         const data = await res.json();
         setFormData({
           id: data.id,
@@ -150,7 +149,7 @@ const EditEmployeeScreen = () => {
   };
 
   const formatDate = (date: Date | null) =>
-    date ? `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}` : "Select a date";
+    date ? `${date.getDate().toString().padStart(2, "0")}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getFullYear()}` : "Select a date";
 
   if (loading || !formData) {
     return <ActivityIndicator style={{ flex: 1 }} size="large" />;

@@ -28,7 +28,7 @@ export interface LeaveRequest {
 }
 
 interface LeaveRequestListProps {
-  userRole?: "admin" | "hr" | "employee"; // Define expected roles if needed
+  userRole?: "admin" | "hr" | "employee";
 }
 
 const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
@@ -39,7 +39,7 @@ const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
   useEffect(() => {
     if (activeTab === "pending") {
       fetchPendingRequests();
-    } else if (activeTab === "processed") {
+    } else {
       fetchProcessedRequests();
     }
   }, [activeTab]);
@@ -55,9 +55,15 @@ const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
         }
       );
       console.log("API Response:", response.data);
-      const pendingData = response.data.filter(
-        (req: LeaveRequest) => req.status === "pending"
-      );
+
+      // Filter for pending, then sort by created_at descending (most recent first)
+      const pendingData = response.data
+        .filter((req) => req.status === "pending")
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
       setLeaveRequests(pendingData);
     } catch (error: any) {
       console.error(
@@ -81,11 +87,17 @@ const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
         }
       );
       console.log("API Response:", response.data);
-      // Filter for approved or rejected requests
-      const processedData = response.data.filter(
-        (req: LeaveRequest) =>
-          req.status === "approved" || req.status === "rejected"
-      );
+
+      // Filter for approved or rejected, then sort by created_at descending
+      const processedData = response.data
+        .filter(
+          (req) => req.status === "approved" || req.status === "rejected"
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
       setLeaveRequests(processedData);
     } catch (error: any) {
       console.error(
@@ -111,7 +123,7 @@ const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       Alert.alert("Success", `Leave request ${newStatus}!`);
-      setLeaveRequests(leaveRequests.filter((req) => req.id !== id));
+      setLeaveRequests((prev) => prev.filter((req) => req.id !== id));
     } catch (error: any) {
       console.error(
         `Error updating leave request (${newStatus}):`,
@@ -126,16 +138,16 @@ const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
     if (item.leave_type === "paid") {
       if (item.total_days > 1) {
         const unpaidDays = item.total_days - 1;
-        return `Effective: 1 day Paid, ${unpaidDays} day(s) Unpaid`;
+        return `Effective: 1 day Paid, ${unpaidDays} days Unpaid`;
       }
       return "Effective: 1 day Paid";
     }
     if (item.leave_type === "sick") {
       if (item.total_days > 2) {
         const extra = item.total_days - 2;
-        return `Effective: 2 day(s) Sick, ${extra} day(s) Unpaid`;
+        return `Effective: 2 days Sick, ${extra} days Unpaid`;
       }
-      return `Effective: ${item.total_days} day(s) Sick`;
+      return `Effective: ${item.total_days} days Sick`;
     }
     return ""; // For unpaid leave or if no breakdown is needed.
   };
@@ -143,16 +155,13 @@ const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
   const renderRequest: ListRenderItem<LeaveRequest> = ({ item }) => (
     <View style={styles.itemContainer}>
       <Text style={styles.itemText}>
-        <Text style={styles.label}>Request ID:</Text>{" "}
-        {item.id}
+        <Text style={styles.label}>Request ID:</Text> {item.id}
       </Text>
       <Text style={styles.itemText}>
-        <Text style={styles.label}>Employee ID:</Text>{" "}
-        {item.employee_id || "N/A"}
+        <Text style={styles.label}>Employee ID:</Text> {item.employee_id || "N/A"}
       </Text>
       <Text style={styles.itemText}>
-        <Text style={styles.label}>Employee Name:</Text>{" "}
-        {item.employee_name || "N/A"}
+        <Text style={styles.label}>Employee Name:</Text> {item.employee_name || "N/A"}
       </Text>
       <Text style={styles.itemText}>
         <Text style={styles.label}>Start Date:</Text> {item.start_date}
@@ -161,8 +170,7 @@ const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
         <Text style={styles.label}>End Date:</Text> {item.end_date}
       </Text>
       <Text style={styles.itemText}>
-        <Text style={styles.label}>Total Days:</Text>{" "}
-        {item.total_days ?? "N/A"}
+        <Text style={styles.label}>Total Days:</Text> {item.total_days ?? "N/A"}
       </Text>
       <Text style={styles.itemText}>
         <Text style={styles.label}>Leave Type:</Text> {item.leave_type}
@@ -174,15 +182,28 @@ const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
         <Text style={styles.label}>Request Date:</Text>{" "}
         {new Date(item.created_at).toLocaleString()}
       </Text>
-      <Text style={styles.itemText}>
-        <Text style={styles.label}>Status:</Text>{" "}
-        {item.status.toUpperCase()}
-      </Text>
-      {(item.leave_type === "paid" || item.leave_type === "sick") && (
-        <Text style={styles.breakdownText}>
-          {getBreakdownMessage(item)}
+
+      {/* Status with dynamic color */}
+      <View style={styles.statusContainer}>
+        <Text style={styles.label}>Status:</Text>
+        <Text
+          style={[
+            styles.statusText,
+            item.status === "approved"
+              ? styles.statusApproved
+              : item.status === "rejected"
+              ? styles.statusRejected
+              : {}
+          ]}
+        >
+          {" " + item.status.toUpperCase()}
         </Text>
+      </View>
+
+      {(item.leave_type === "paid" || item.leave_type === "sick") && (
+        <Text style={styles.breakdownText}>{getBreakdownMessage(item)}</Text>
       )}
+
       {activeTab === "pending" && (
         <View style={styles.buttonContainer}>
           <TouchableOpacity
@@ -205,6 +226,7 @@ const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Leave Requests</Text>
+
       {/* Toggle Buttons */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -215,12 +237,9 @@ const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
           onPress={() => setActiveTab("pending")}
         >
           <Text
-            style={[
-              styles.tabText,
-              activeTab === "pending" && styles.activeTabText,
-            ]}
+            style={[styles.tabText, activeTab === "pending" && styles.activeTabText]}
           >
-            Pending Requests
+            Pending
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -231,15 +250,13 @@ const LeaveRequestList: React.FC<LeaveRequestListProps> = ({ userRole }) => {
           onPress={() => setActiveTab("processed")}
         >
           <Text
-            style={[
-              styles.tabText,
-              activeTab === "processed" && styles.activeTabText,
-            ]}
+            style={[styles.tabText, activeTab === "processed" && styles.activeTabText]}
           >
-            Processed Requests
+            Processed
           </Text>
         </TouchableOpacity>
       </View>
+
       {loading ? (
         <ActivityIndicator
           size="large"
@@ -276,12 +293,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#2563EB",
     textAlign: "center",
-  },
-  screenDescription: {
-    fontSize: 16,
-    textAlign: "center",
-    color: "#444",
-    marginBottom: 20,
   },
   tabContainer: {
     flexDirection: "row",
@@ -327,9 +338,25 @@ const styles = StyleSheet.create({
   label: {
     fontWeight: "bold",
   },
+  statusContainer: {
+    flexDirection: "row",
+    marginBottom: 6,
+    alignItems: "center",
+  },
+  statusText: {
+    fontSize: 16,
+  },
+  statusApproved: {
+    color: "green",
+    fontWeight: "bold",
+  },
+  statusRejected: {
+    color: "red",
+    fontWeight: "bold",
+  },
   breakdownText: {
     fontSize: 15,
-    color: "#2563EB",
+    color: "#4682B4",
     marginBottom: 8,
     fontStyle: "italic",
   },

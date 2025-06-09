@@ -1,6 +1,7 @@
 from django.db import models
 from leavedetails.models import LeaveDetails
 from employee.models import Employee
+from decimal import Decimal
 
 class Payroll(models.Model):
 
@@ -43,22 +44,22 @@ class Payroll(models.Model):
             self.base_pay = self.fee_per_month
             self.variable_pay = 0
         else:
-            self.base_pay = self.fee_per_month * 0.75
-            self.variable_pay = self.fee_per_month * 0.25
+            self.base_pay = self.fee_per_month * Decimal('0.75')
+            self.variable_pay = self.fee_per_month * Decimal('0.25') 
         
         leave_details_record = LeaveDetails.objects.filter(employee=self.employee, month=self.month).first()
         working_days = leave_details_record.working_days
         payable_days = (leave_details_record.days_worked) + (leave_details_record.paid_leaves) + (leave_details_record.sick_leaves)
         absent_days = leave_details_record.absent_days
-        base_pay_per_day = self.fee_per_month / working_days
-        penalty_per_absnet = base_pay_per_day * 0.5
+        base_pay_per_day = self.base_pay / working_days
+        penalty_per_absnet = base_pay_per_day * Decimal('0.5')
         total_absent_penalty = absent_days * penalty_per_absnet
         self.base_pay_earned = (base_pay_per_day * payable_days) - total_absent_penalty
         multipliers = {'1': 1.10, '2': 0.75, '3': 0.50, '4': 0, 'NA': 0}
         multiplier = multipliers.get(self.perform_category, 0)
-        self.perform_comp_payable = self.variable_pay * multiplier
+        self.perform_comp_payable = self.variable_pay * Decimal(multiplier)
         self.fee_earned = self.base_pay_earned + self.perform_comp_payable
-        self.tds = self.fee_earned * 0.1
+        self.tds = self.fee_earned * Decimal('0.1')
         self.net_fee_earned = round(self.fee_earned - self.tds + self.reimbursement)
 
     def __str__(self):

@@ -13,7 +13,6 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
-//import * as SecureStore from 'expo-secure-store';
 import { getAccessToken } from "../../auth/index";
 
 interface FormData {
@@ -386,7 +385,7 @@ const AddEmployeeScreen = () => {
             </Text>
           </Pressable>
           <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.calendarIcon}>
-            <Ionicons name="calendar-outline" size={28} color="#22186F" />
+            <Ionicons name="calendar" size={28} color="#22186F" />
           </TouchableOpacity>
           {showDatePicker && (
             <DateTimePicker
