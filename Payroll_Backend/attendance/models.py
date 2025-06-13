@@ -5,8 +5,10 @@ from employee.models import Employee
 class Attendance(models.Model):
 
     STATUS_CHOICES = [
-        ('Leave', 'Leave'),
-        ('Half Leave', 'Half Leave'),
+        ('Paid Leave', 'Paid Leave'),
+        ('Half Paid Leave', 'Half Paid Leave'),
+        ('UnPaid Leave', 'UnPaid Leave'),
+        ('Half UnPaid Leave', 'Half UnPaid Leave'),
         ('Sick Leave', 'Sick Leave'),
         ('Holiday', 'Holiday'),
         ('Present', 'Present'),
