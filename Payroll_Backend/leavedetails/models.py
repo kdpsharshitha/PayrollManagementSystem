@@ -113,10 +113,10 @@ class LeaveDetails(models.Model):
         HalfPaidLeaves = records.filter(status='Half Paid Leave').count()
         UnPaidLeaves = records.filter(status='UnPaid Leave').count()
         HalfUnPaidLeaves = records.filter(status='Half UnPaid Leave').count()
-        # leaves = records.filter(status='Leave').count()
-        # half_leaves = records.filter(status='Half Leave').count()
         sick_leaves = records.filter(status='Sick Leave').count()
         holidays = records.filter(status='Holiday').count()
+        # leaves = records.filter(status='Leave').count()
+        # half_leaves = records.filter(status='Half Leave').count()
         # total_leaves = Decimal(leaves) + Decimal('0.5') * Decimal(half_leaves)
 
         self.working_days = num_days - holidays

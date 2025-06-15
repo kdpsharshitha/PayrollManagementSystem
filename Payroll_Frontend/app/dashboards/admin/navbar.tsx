@@ -42,6 +42,9 @@ export default function Navbar() {
           <Pressable onPress={() => handleNavigate("/dashboards/admin/mng_payroll")}>
             <Text style={styles.menuItem}>Manage Payroll</Text>
           </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/my_payslips")}>
+            <Text style={styles.menuItem}>My Payslips</Text>
+          </Pressable>
         </View>
       )}
 

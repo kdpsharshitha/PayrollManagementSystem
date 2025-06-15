@@ -47,3 +47,10 @@ def login(request):
         {"error": "Invalid credentials"},
         status=status.HTTP_400_BAD_REQUEST
     )
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_logged_in_employee(request):
+    user = request.user
+    serializer = EmployeeSerializer(user)
+    return Response(serializer.data)

@@ -156,7 +156,7 @@ const AddEmployeeScreen = () => {
 
     try {
 
-      const token = await getAccessToken();  // ✅ Retrieve token
+      const token = await getAccessToken(); 
       if (!token) {
         showAlert("Authentication Error", "You are not logged in.");
         return;

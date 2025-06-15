@@ -40,7 +40,7 @@ const MngPayrollPage = () => {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [displayMonth, setDisplayMonth] = useState('');
   const [showMonthPicker, setShowMonthPicker] = useState(false);
-
+  const [loggedInEmployeeId, setLoggedInEmployeeId] = useState<string | null>(null);
   const [performanceCategory, setPerformanceCategory] = useState<string | null>(null);
   const [reimbursement, setReimbursement] = useState('');
   const [employeeDateJoined, setEmployeeDateJoined] = useState<Date | null>(null); 
@@ -49,7 +49,31 @@ const MngPayrollPage = () => {
   const router = useRouter();
 
   useEffect(() => {
+    const fetchLoggedInEmployeeId = async () => {
+      const token = await getAccessToken();
+
+      const response = await fetch('http://192.168.1.6:8000/api/employee/me/', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log(data.id);
+        setLoggedInEmployeeId(data.id);
+      }
+    };
+
+    fetchLoggedInEmployeeId();
+  }, []);
+
+
+  useEffect(() => {
     const fetchEmployees = async () => {
+      if (!loggedInEmployeeId) return;
       try {
         const token = await getAccessToken();
 
@@ -67,7 +91,7 @@ const MngPayrollPage = () => {
 
         const data = await response.json();
 
-        const formattedEmployees = data.sort((a: Employee, b: Employee) =>
+        const formattedEmployees = data.filter((emp: Employee) => emp.id !== loggedInEmployeeId).sort((a: Employee, b: Employee) =>
             a.id.toString().localeCompare(b.id.toString(), undefined, { numeric: true })
         ).map((emp: Employee) => ({
             label: `${emp.id} - ${emp.name} - ${emp.role}`,
@@ -75,7 +99,7 @@ const MngPayrollPage = () => {
             payStructure: emp.pay_structure,
             dateJoined: emp.date_joined,
         }));
-
+        
         setEmployees(formattedEmployees);
       } catch (error: any) {
         console.error('Failed to fetch employees:', error.message);
@@ -84,7 +108,7 @@ const MngPayrollPage = () => {
     };
 
     fetchEmployees();
-  }, []);
+  }, [loggedInEmployeeId]);
 
   // Effect to filter employees based on search query
   useEffect(() => {
@@ -113,7 +137,12 @@ const MngPayrollPage = () => {
     // Clear previous error message
     setErrorMessage(null);
 
-    if (!selectedEmployee || !selectedMonth || !performanceCategory || reimbursement === '') {
+    if (!selectedEmployee) {
+      Alert.alert('Validation Error', 'Please select valid Employee');
+      return;
+    }
+
+    if (!selectedMonth || !performanceCategory || reimbursement === '') {
       Alert.alert('Validation Error', 'Please fill all fields');
       return;
     }
