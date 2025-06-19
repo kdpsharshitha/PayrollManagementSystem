@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Platform, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter } from "expo-router";
@@ -8,8 +8,12 @@ export default function Navbar() {
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const router = useRouter();
 
+  const isWeb = Platform.OS === "web";
+  const windowHeight = Dimensions.get('window').height;
+
   const handleNavigate = (path: string) => {
     setMenuVisible(false);
+    setProfileMenuVisible(false);
     router.push(path as any);
   };
 
@@ -28,7 +32,29 @@ export default function Navbar() {
         </Pressable>
       </View>
 
-      {menuVisible && (
+      {/* Sidebar for Web */}
+      {isWeb && menuVisible && (
+        <View style={[styles.sidebar, { height: windowHeight - 75 }]}>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/add_new_employee")}>
+            <Text style={styles.sidebarItem}>Add New Employee</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/view_mng_emp_details")}>
+            <Text style={styles.sidebarItem}>View & Manage Employee Details</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/hr_leave_requests")}>
+            <Text style={styles.sidebarItem}>Manage HR Leave Requests</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/mng_payroll")}>
+            <Text style={styles.sidebarItem}>Manage Payroll</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/my_payslips")}>
+            <Text style={styles.sidebarItem}>My Payslips</Text>
+          </Pressable>
+        </View>
+      )}
+
+
+      {!isWeb && menuVisible && (
         <View style={styles.menu}>
           <Pressable onPress={() => handleNavigate("/dashboards/admin/add_new_employee")}>
             <Text style={styles.menuItem}>Add New Employee</Text>
@@ -79,7 +105,8 @@ const styles = StyleSheet.create({
   },
   navbar: {
     height: 60,
-    marginTop:55,
+    //marginTop:55,
+    marginTop: Platform.OS === "web" ? 15 : 55,
     paddingHorizontal: 16,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -110,7 +137,8 @@ const styles = StyleSheet.create({
   profileMenu: {
     position: "absolute",
     right: 10,
-    top: 110,
+    //top: 105,
+    top: Platform.OS === "web" ? 65 : 105,
     backgroundColor: "#f9f9f9",
     borderWidth: 1,
     borderColor: "#ccc",
@@ -118,5 +146,23 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 15,
     zIndex: 10,
+  },
+  sidebar: {
+    position: 'absolute',
+    //top: 115,
+    top: Platform.OS === "web" ? 75 : 115,
+    left: 0,
+    width: 280,
+    backgroundColor: '#271D7A',
+    padding: 20,
+    paddingTop: 80, 
+    zIndex: 20,
+    borderRightWidth: 1,
+    borderColor: '#ccc',
+  },
+  sidebarItem: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 16,
   },
 });

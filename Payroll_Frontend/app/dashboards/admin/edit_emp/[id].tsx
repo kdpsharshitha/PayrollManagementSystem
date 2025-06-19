@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Pressable,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -43,6 +44,13 @@ const EditEmployeeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  const showAlert = (title: string, message: string) => {
+        if (Platform.OS === "web") {
+          window.alert(`${title}: ${message}`);
+        } else {
+          Alert.alert(title, message);
+        }
+  };
 
   useEffect(() => {
     const fetchEmployee = async () => {
@@ -72,7 +80,7 @@ const EditEmployeeScreen = () => {
         
         setLoading(false);
       } catch (err) {
-        Alert.alert("Error", "Could not load employee data.");
+        showAlert("Error", "Could not load employee data.");
       }
     };
     fetchEmployee();
@@ -89,31 +97,31 @@ const EditEmployeeScreen = () => {
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
     if (!formData.name.trim()) {
-      Alert.alert("Validation Error", "Name is required.");
+      showAlert("Validation Error", "Name is required.");
       return false;
     }
     if (!phoneRegex.test(formData.phone_no)) {
-      Alert.alert("Validation Error", "Phone number must be 10 digits.");
+      showAlert("Validation Error", "Phone number must be 10 digits.");
       return false;
     }
     if (formData.emergency_phone_no && !phoneRegex.test(formData.emergency_phone_no)) {
-      Alert.alert("Validation Error", "Emergency phone number must be 10 digits.");
+      showAlert("Validation Error", "Emergency phone number must be 10 digits.");
       return false;
     }
     if (!formData.pan_no || !panRegex.test(formData.pan_no)) {
-      Alert.alert("Validation Error", "Enter a valid 10-character PAN number.");
+      showAlert("Validation Error", "Enter a valid 10-character PAN number.");
       return false;
     }
     if (!formData.designation.trim()) {
-      Alert.alert("Validation Error", "Designation is required.");
+      showAlert("Validation Error", "Designation is required.");
       return false;
     }
     if (!formData.fee_per_month || isNaN(Number(formData.fee_per_month))) {
-      Alert.alert("Validation Error", "Fee per month must be a valid number.");
+      showAlert("Validation Error", "Fee per month must be a valid number.");
       return false;
     }
     if (!formData.date_joined) {
-      Alert.alert("Validation Error", "Please select the joining date.");
+      showAlert("Validation Error", "Please select the joining date.");
       return false;
     }
 
@@ -139,17 +147,22 @@ const EditEmployeeScreen = () => {
 
       if (!res.ok) {
         const err = await res.json();
-        Alert.alert("Update Failed", JSON.stringify(err));
+        showAlert("Update Failed", JSON.stringify(err));
       } else {
-        Alert.alert("Success", "Employee updated successfully!");
+        showAlert("Success", "Employee updated successfully!");
       }
     } catch (error) {
-      Alert.alert("Error", "Something went wrong.");
+      showAlert("Error", "Something went wrong.");
     }
   };
 
   const formatDate = (date: Date | null) =>
     date ? `${date.getDate().toString().padStart(2, "0")}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getFullYear()}` : "Select a date";
+
+  const formatDateForWebInput = (date: Date | null) => {
+    if (!date) return "";
+    return date.toISOString().split("T")[0];
+  };
 
   if (loading || !formData) {
     return <ActivityIndicator style={{ flex: 1 }} size="large" />;
@@ -157,10 +170,12 @@ const EditEmployeeScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
+      
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Ionicons name="arrow-back" size={20} color="#22186F" />
       </TouchableOpacity>
 
+      <View style={styles.formWrapper}>
       <Text style={styles.heading}>Edit Employee Details</Text>
 
       <Text style={styles.label}>Employee ID</Text>
@@ -235,10 +250,32 @@ const EditEmployeeScreen = () => {
       <TextInput style={styles.input} value={formData.designation} onChangeText={(v) => handleChange("designation", v)} />
 
       <Text style={styles.label}>Date Joined</Text>
-      <Pressable onPress={() => setShowDatePicker(true)}>
-        <Text style={styles.dateInput}>{formatDate(formData.date_joined)}</Text>
-      </Pressable>
-      {showDatePicker && (
+      {Platform.OS === "web" ? (
+        <input
+          type="date"
+          value={formatDateForWebInput(formData.date_joined)}
+          onChange={(e) => {
+            const val = e.target.value;
+            handleChange("date_joined", val ? new Date(val) : null);
+          }}
+          style={{
+            padding: 12,
+            borderWidth: "1px",
+            borderStyle: "solid",
+            borderColor: "#ccc",
+            borderRadius: 6,
+            fontSize: 16,
+            width: "100%",    
+            backgroundColor: "#fff",
+            boxSizing: "border-box", 
+          }}
+        />
+      ) : (
+        <Pressable onPress={() => setShowDatePicker(true)}>
+          <Text style={styles.dateInput}>{formatDate(formData.date_joined)}</Text>
+        </Pressable>
+      )}
+      {showDatePicker && Platform.OS !== "web" && ( // Only show DateTimePicker on non-web platforms
         <DateTimePicker
           value={formData.date_joined || new Date()}
           mode="date"
@@ -268,22 +305,59 @@ const EditEmployeeScreen = () => {
       
 
       <Pressable style={styles.button} onPress={() => {
-        Alert.alert("Confirm Update","Are you sure you want to edit this employee's details?",[
-            { text: "Cancel", style: "cancel" },
-            { text: "Update", onPress: handleUpdate },
-        ]);
+        if (Platform.OS === "web") {
+          const confirmed = window.confirm("Are you sure you want to edit this employee's details?");
+          if (confirmed) handleUpdate();
+        } else {
+          Alert.alert(
+            "Confirm Update",
+            "Are you sure you want to edit this employee's details?",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Update", onPress: handleUpdate },
+            ]
+          );
+        }
       }}
->
-  <Text style={styles.buttonText}>Update</Text>
-</Pressable>
+      >
+        <Text style={styles.buttonText}>Update</Text>
+      </Pressable>
+
+      </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, paddingTop: 20,paddingHorizontal: 10, backgroundColor: "#fff" },
-  heading: { fontSize: 24, fontWeight: "bold", marginBottom: 20,textAlign: "center",color: "#22186F", },
-  label: { marginTop: 12,marginBottom: 4,fontWeight: "600", fontSize: 16,color: "#333", },
+  container: {
+    flex: 1,
+    paddingTop: 20,
+    paddingHorizontal: 10, 
+    backgroundColor: "#fff" 
+  },
+  formWrapper: {
+    width: "100%",
+    ...(Platform.OS === "web"
+      ? {
+          maxWidth: 800,
+          alignSelf: "center",
+        }
+      : {}),
+  },
+  heading: { 
+    fontSize: 24,
+    fontWeight: "bold", 
+    marginBottom: Platform.OS === "web" ? 30 : 20,
+    textAlign: "center",
+    color: "#22186F", 
+  },
+  label: { 
+    marginTop: 14,
+    marginBottom: 4,
+    fontWeight: "600", 
+    fontSize: 16,
+    color: "#333", 
+  },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -299,9 +373,8 @@ const styles = StyleSheet.create({
   dateInput: {
     borderWidth: 1,
     borderColor: "#ccc",
-    padding: 10,
+    padding: 12,
     borderRadius: 6,
-    marginTop: 4,
     backgroundColor: "#fff",
   },
   button: {
@@ -315,17 +388,19 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: "#fff",textAlign: "center",paddingHorizontal: 20, fontSize: 16, fontWeight: "bold" },
   pickerWrapper: {
-    borderWidth: 1,
+    borderWidth: Platform.OS === "web" ? 0 : 1,
     borderColor: "#ccc",
     borderRadius: 6,
     backgroundColor: "#fff",
-    marginBottom: 8,
-    marginTop: 5,
+    //marginBottom: 8,
+    //marginTop: 5,
   },
   picker: {
     borderColor: "#ccc",
     height: 50,
     width: "100%",
+    borderRadius: 6,
+    borderWidth: 1,
   },
   backButton: {
     marginBottom: 12,

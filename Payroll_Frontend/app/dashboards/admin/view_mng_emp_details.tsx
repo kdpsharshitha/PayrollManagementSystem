@@ -7,6 +7,7 @@ import {
   Alert,
   TextInput,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons, Feather, MaterialIcons } from "@expo/vector-icons";
@@ -31,11 +32,19 @@ export default function EmployeeManagementScreen() {
     fetchEmployees();
   }, []);
 
+  const showAlert = (title: string, message: string) => {
+        if (Platform.OS === "web") {
+          window.alert(`${title}: ${message}`);
+        } else {
+          Alert.alert(title, message);
+        }
+  };
+
   const fetchEmployees = async () => {
     try {
       const token = await getAccessToken();
       if (!token) {
-        Alert.alert("Authentication Error", "You are not logged in.");
+        showAlert("Authentication Error", "You are not logged in.");
         return;
       }
 
@@ -55,33 +64,56 @@ export default function EmployeeManagementScreen() {
   };
 
   const deleteEmployee = async (id: string) => {
-    Alert.alert("Confirm Delete", "Are you sure you want to delete this employee?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const token = await getAccessToken();
-            if (!token) {
-              Alert.alert("Authentication Error", "You are not logged in.");
-              return;
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm("Are you sure you want to delete this employee?");
+      if (!confirmed) return;
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          showAlert("Authentication Error", "You are not logged in.");
+          return;
+        }
+
+        await fetch(`http://192.168.1.6:8000/api/employee/employees/${id}/`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setEmployees((prev) => prev.filter((emp) => emp.id !== id));
+        showAlert("Success", "Employee deleted successfully.");
+      } catch (error) {
+        console.error("Delete failed:", error);
+      }
+    } else {
+      Alert.alert("Confirm Delete", "Are you sure you want to delete this employee?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const token = await getAccessToken();
+              if (!token) {
+                showAlert("Authentication Error", "You are not logged in.");
+                return;
+              }
+
+              await fetch(`http://192.168.1.6:8000/api/employee/employees/${id}/`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+
+              setEmployees((prev) => prev.filter((emp) => emp.id !== id));
+              showAlert("Success", "Employee deleted successfully.");
+            } catch (error) {
+              console.error("Delete failed:", error);
             }
-
-            await fetch(`http://192.168.1.6:8000/api/employee/employees/${id}/`, {
-              method: "DELETE",
-              headers: { Authorization: `Bearer ${token}` },
-            });
-
-            setEmployees((prev) => prev.filter((emp) => emp.id !== id));
-            Alert.alert("Success", "Employee deleted successfully.");
-          } catch (error) {
-            console.error("Delete failed:", error);
-          }
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
+
 
   const handleSearch = () => {
     if (!search) return employees;
@@ -139,6 +171,7 @@ export default function EmployeeManagementScreen() {
   );
 
   return (
+    <View style={styles.outerWrapper}>
     <FlatList
       style={styles.container}
       data={handleSearch()}
@@ -154,22 +187,37 @@ export default function EmployeeManagementScreen() {
       }
       contentContainerStyle={{ paddingBottom: 100 }}
     />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    width: "100%",
     flex: 1,
     backgroundColor: "#fff", // light gray
     paddingHorizontal: 8,
     paddingTop: 16,
   },
+  outerWrapper: {
+    flex: 1,
+    alignItems: "center", // center content on wide screens
+    backgroundColor: "#fff",
+  },
   searchBox: {
     backgroundColor: "white",
     padding: 12,
-    marginBottom: 12,
+    marginTop: Platform.OS === "web" ? 20 : 10,
+    marginBottom: Platform.OS === "web" ? 20 : 12,
     borderRadius: 12,
     elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    alignSelf: "center",       // center search box
+    width: "100%",
+    maxWidth: 800,
   },
   card: {
     backgroundColor: "white",
@@ -177,6 +225,13 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 16,
     elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    alignSelf: "center",       // center card in wide screens
+    width: "100%",
+    maxWidth: 800, 
   },
   name: {
     fontSize: 16,

@@ -21,6 +21,7 @@ import os
 from reportlab.lib.units import mm
 from django.conf import settings
 from django.core.mail import EmailMessage
+import base64
 
 class PayrollViewSet(viewsets.ModelViewSet):
     queryset = Payroll.objects.all()
@@ -292,7 +293,10 @@ class GeneratePayslipPDFView(APIView):
 
         buffer.seek(0)
 
-        return Response({"message": "Payslip generated and emailed successfully.", "pdf_data": buffer.getvalue().decode('latin-1')}, status=status.HTTP_200_OK)
+        pdf_binary_data = buffer.getvalue()
+        pdf_base64_string = base64.b64encode(pdf_binary_data).decode('utf-8')
+
+        return Response({"message": "Payslip generated and emailed successfully.", "pdf_data": pdf_base64_string}, status=status.HTTP_200_OK)
     
 
 class DownloadPayslipPDFView(APIView):

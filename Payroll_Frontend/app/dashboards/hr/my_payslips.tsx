@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet, Platform } from 'react-native';
 import { getAccessToken } from '../../auth'; 
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -14,6 +14,14 @@ const MyPayslipsScreen = () => {
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const fetchPayslips = async () => {
     setLoading(true);
     try {
@@ -27,7 +35,7 @@ const MyPayslipsScreen = () => {
       const data = await res.json();
       setPayslips(data);
     } catch (err) {
-      Alert.alert('Error', 'Failed to fetch payslips.');
+      showAlert('Error', 'Failed to fetch payslips.');
     } finally {
       setLoading(false);
     }
@@ -39,24 +47,46 @@ const MyPayslipsScreen = () => {
       const token = await getAccessToken();
       const downloadUrl  = `http://192.168.1.6:8000/api/payroll/download_payslip/?employee_id=${employee_id}&month=${month}`;
 
-      const downloadResumable = FileSystem.createDownloadResumable(
-        downloadUrl,
-        FileSystem.documentDirectory + `payslip_${employee_id}_${month}.pdf`,
-        {
+      if (Platform.OS === 'web') {
+        // Web-specific download logic
+        const res = await fetch(downloadUrl, {
           headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+        });
 
-      const downloadResult = await downloadResumable.downloadAsync();
-      if (downloadResult?.uri) {
-        const downloadedUri = downloadResult.uri;
-        await Sharing.shareAsync(downloadedUri);
+        if (!res.ok) {
+          throw new Error('Failed to download payslip on web');
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `payslip_${employee_id}_${month}.pdf`; // Suggest a filename
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url); // Clean up the URL object
       } else {
-        Alert.alert("Download failed.");
+        // Native app-specific download logic (existing code)
+        const downloadResumable = FileSystem.createDownloadResumable(
+          downloadUrl,
+          FileSystem.documentDirectory + `payslip_${employee_id}_${month}.pdf`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        const downloadResult = await downloadResumable.downloadAsync();
+        if (downloadResult?.uri) {
+          const downloadedUri = downloadResult.uri;
+          await Sharing.shareAsync(downloadedUri);
+        } else {
+          Alert.alert("Download failed.");
+        }
       }
     } catch (error) {
       console.error("PDF download error:", error);
-      Alert.alert("Error downloading payslip.");
+      showAlert('Error', 'Error downloading payslip.');
     } finally {
       setLoading(false);
     }
@@ -87,7 +117,7 @@ const MyPayslipsScreen = () => {
               style={styles.downloadButton}
               onPress={() => downloadPayslip(payslip.month, payslip.employee_id)}
             >
-              <Text style={styles.downloadButtonText}>Download</Text>
+              <Text style={styles.downloadButtonText}>{Platform.OS === 'web' ? 'Download' : 'Download/Share'}</Text>
             </TouchableOpacity>
           </View>
         ))
@@ -104,15 +134,23 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginTop: Platform.OS === "web" ? 50 : 5, 
+    marginBottom: Platform.OS === "web" ? 30 : 20,
     color: "#22186F",
     textAlign: "center",
   },
   card: {
     backgroundColor: '#f3f4f6',
     padding: 16,
-    marginBottom: 12,
+    marginBottom: Platform.OS === "web" ? 20 : 15,
     borderRadius: 8,
+    width: "100%",
+        ...(Platform.OS === "web"
+          ? {
+              maxWidth: 600,
+              alignSelf: "center",
+            }
+          : {}),
   },
   downloadButton: {
     marginTop: 10,

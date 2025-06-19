@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, StyleSheet, ScrollView, Alert, TouchableOpacity } from "react-native";
+import { View, Text, ActivityIndicator, StyleSheet, ScrollView, Alert, TouchableOpacity, Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 //import * as SecureStore from "expo-secure-store";
@@ -36,11 +36,19 @@ export default function ViewEmployee() {
     }
   }, [id]);
 
+  const showAlert = (title: string, message: string) => {
+        if (Platform.OS === "web") {
+          window.alert(`${title}: ${message}`);
+        } else {
+          Alert.alert(title, message);
+        }
+  };
+
   const fetchEmployeeDetails = async (empId: string) => {
     try {
       const token = await getAccessToken();
       if (!token) {
-        Alert.alert("Authentication Error", "You are not logged in.");
+        showAlert("Authentication Error", "You are not logged in.");
         return;
       }
 
@@ -137,10 +145,13 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 4 },
     elevation: 4,
+    alignSelf: "center",       // center search box
+    width: "100%",
+    maxWidth: 800,
   },
   fieldRow: {
     flexDirection: "row",
@@ -152,6 +163,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#666",
+    minWidth: Platform.OS === "web" ? 160 : 0,
   },
   detailValue: {
     fontSize: 16,
@@ -159,5 +171,6 @@ const styles = StyleSheet.create({
     color: "#222",
     marginLeft:10,
     flex: 1,
+    lineHeight: 22,
   },
 });

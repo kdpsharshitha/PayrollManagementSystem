@@ -48,6 +48,14 @@ const MngPayrollPage = () => {
 
   const router = useRouter();
 
+  const showAlert = (title: string, message: string) => {
+        if (Platform.OS === "web") {
+          window.alert(`${title}: ${message}`);
+        } else {
+          Alert.alert(title, message);
+        }
+      };
+
   useEffect(() => {
     const fetchLoggedInEmployeeId = async () => {
       const token = await getAccessToken();
@@ -103,7 +111,7 @@ const MngPayrollPage = () => {
         setEmployees(formattedEmployees);
       } catch (error: any) {
         console.error('Failed to fetch employees:', error.message);
-        Alert.alert('Error', 'Unable to load employees');
+        showAlert('Error', 'Unable to load employees');
       }
     };
 
@@ -133,27 +141,39 @@ const MngPayrollPage = () => {
     setErrorMessage(null);
   };
 
+  const formatMonthForWebInput = (dateString: string) => {
+    if (!dateString) return '';
+    // selectedMonth is already in 'YYYY-MM' format
+    return dateString;
+  };
+
   const handleSubmit = async () => {
     // Clear previous error message
     setErrorMessage(null);
 
     if (!selectedEmployee) {
-      Alert.alert('Validation Error', 'Please select valid Employee');
+      showAlert('Validation Error', 'Please select valid Employee');
       return;
     }
 
     if (!selectedMonth || !performanceCategory || reimbursement === '') {
-      Alert.alert('Validation Error', 'Please fill all fields');
+      showAlert('Validation Error', 'Please fill all fields');
+      return;
+    }
+
+    const reimbursementValue = parseFloat(reimbursement);
+    if (isNaN(reimbursementValue)) {
+      showAlert('Validation Error', 'Reimbursement must be a number');
       return;
     }
 
     if (selectedEmployeePayStructure === 'fixed' && performanceCategory !== 'NA') {
-      Alert.alert('Validation Error', 'Invalid!! "Not Applicable (NA)" is only allowed for employees with Fixed Pay Structure.');
+      showAlert('Validation Error', 'Invalid!! "Not Applicable (NA)" is only allowed for employees with Fixed Pay Structure.');
       return;
     }
 
     if (selectedEmployeePayStructure === 'variable' && performanceCategory === 'NA') {
-      Alert.alert('Validation Error', 'Invalid!! "Not Applicable (NA)" is not allowed for employees with Variable Pay Structure.');
+      showAlert('Validation Error', 'Invalid!! "Not Applicable (NA)" is not allowed for employees with Variable Pay Structure.');
       return;
     }
 
@@ -167,7 +187,7 @@ const MngPayrollPage = () => {
       const joinMonthYear = `${joinDate.getFullYear()}-${(joinDate.getMonth() + 1).toString().padStart(2, '0')}`;
 
       if (selectedMonthYear < joinMonthYear || selectedMonthYear > currentMonthYear) {
-        Alert.alert(
+        showAlert(
           'Validation Error',
           'Invalid!! Selected month must be between the employee\'s joined month and the current month.',
         );
@@ -204,7 +224,7 @@ const MngPayrollPage = () => {
         return; 
       }
 
-      Alert.alert('Success', 'Payroll generated successfully!');
+      showAlert('Success', 'Payroll generated successfully!');
       router.push({
         pathname: '/dashboards/admin/review_payroll',
         params: {
@@ -220,6 +240,7 @@ const MngPayrollPage = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.formWrapper}>
       <Text style={styles.heading}>Calculate Monthly Payroll</Text>
 
       <Text style={styles.label}>Select Employee:</Text>
@@ -257,14 +278,36 @@ const MngPayrollPage = () => {
       )}
 
       <Text style={styles.label}>Select Month:</Text>
-      <TouchableOpacity onPress={() => setShowMonthPicker(true)} style={styles.calendarButton}>
-        <Ionicons name="calendar" size={24} color="#22186F" />
-        <Text style={styles.calendarText}>
-          {displayMonth || '-- Select Month --'}
-        </Text>
-      </TouchableOpacity>
+      {Platform.OS === "web" ? (
+          <input
+            type="month" // Use type="month" for specific month selection
+            value={formatMonthForWebInput(selectedMonth)}
+            onChange={(e) => {
+              const val = e.target.value; // Format will be 'YYYY-MM'
+              setSelectedMonth(val);
+              // Set displayMonth for UI if needed, for 'YYYY-MM' input, it's often best to just show 'YYYY-MM'
+              // Or you can parse it back to a Date object to get a locale-specific month name
+              if (val) {
+                const [year, month] = val.split('-');
+                const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+                setDisplayMonth(date.toLocaleString('default', { month: 'long' }) + ' ' + year);
+              } else {
+                setDisplayMonth('');
+              }
+              setErrorMessage(null);
+            }}
+            style={styles.webMonthInput} 
+          />
+        ) : (
+          <TouchableOpacity onPress={() => setShowMonthPicker(true)} style={styles.calendarButton}>
+            <Ionicons name="calendar" size={24} color="#22186F" />
+            <Text style={styles.calendarText}>
+              {displayMonth || '-- Select Month --'}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-      {showMonthPicker && (
+      {showMonthPicker && Platform.OS !== "web" && (
         <DateTimePicker
           mode="date"
           value={new Date()}
@@ -321,6 +364,7 @@ const MngPayrollPage = () => {
       <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
         <Text style={styles.submitText}>Calculate</Text>
       </TouchableOpacity>
+    </View>
     </ScrollView>
   );
 };
@@ -332,6 +376,15 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#fff',
     marginTop:20,
+  },
+  formWrapper: {
+    width: "100%",
+    ...(Platform.OS === "web"
+      ? {
+          maxWidth: 600,
+          alignSelf: "center",
+        }
+      : {}),
   },
   heading: {
     fontSize: 24,
@@ -348,22 +401,25 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   pickerContainer: {
-    borderWidth: 1,
+    borderWidth: Platform.OS === "web" ? 0 : 1,
     borderColor: '#ccc',
     borderRadius: 6,
     backgroundColor: '#fff',
-    marginBottom: 8,
+    //marginBottom: 8,
     marginTop: 2,
   },
   picker: {
     borderColor: "#ccc",
     width: "100%",
+    height: 55,
+    borderRadius: 6,
+    borderWidth: 1,
   },
   calendarButton: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
-    marginBottom: 8,
+    //marginBottom: 8,
     padding: 12,
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -385,6 +441,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     height: 55,
     marginTop:2,
+    //marginBottom: 8,
   },
   submitButton: {
     backgroundColor: '#22186F',
@@ -442,5 +499,18 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     borderWidth: 1,
     borderColor: '#b2ebf2',
+  },
+  webMonthInput: {
+    padding: 12,
+    borderWidth: 1, 
+    borderStyle: "solid",
+    borderColor: "#ccc",
+    borderRadius: 6,
+    fontSize: 16,
+    width: "100%",
+    backgroundColor: "#fff",
+    boxSizing: "border-box", // Important for consistent sizing
+    height: 55, // Match native input height
+    marginTop: 2,
   },
 });

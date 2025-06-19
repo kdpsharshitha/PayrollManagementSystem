@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Platform, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter } from "expo-router";
@@ -9,8 +9,13 @@ export default function Navbar() {
   const [leavesDropdownVisible, setLeavesDropdownVisible] = useState(false);
   const router = useRouter();
 
+  const isWeb = Platform.OS === "web";
+  const windowHeight = Dimensions.get('window').height;
+
   const handleNavigate = (path: string) => {
     setMenuVisible(false);
+    setProfileMenuVisible(false);
+    setLeavesDropdownVisible(false);
     router.push(path as any);
   };
 
@@ -29,7 +34,41 @@ export default function Navbar() {
         </Pressable>
       </View>
 
-      {menuVisible && (
+      {/* Web Sidebar */}
+      {isWeb && menuVisible && (
+        <View style={[styles.sidebar, { height: windowHeight - 75 }]}>
+          <Pressable onPress={() => handleNavigate("/dashboards/hr/view_mng_emp_details")}>
+            <Text style={styles.sidebarItem}>View & Manage Employee Details</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/hr/mng_attendance")}>
+            <Text style={styles.sidebarItem}>Manage Attendance</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/hr/emp_leave_requests")}>
+            <Text style={styles.sidebarItem}>Manage Employee Leave Requests</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/hr/mng_payroll")}>
+            <Text style={styles.sidebarItem}>Manage Payroll</Text>
+          </Pressable>
+          <Pressable onPress={() => setLeavesDropdownVisible(!leavesDropdownVisible)}>
+            <Text style={styles.sidebarItem}>My Leaves ▾</Text>
+          </Pressable>
+          {leavesDropdownVisible && (
+            <View style={styles.sdropdown}>
+              <Pressable onPress={() => handleNavigate("/dashboards/hr/request_leave")}>
+                <Text style={styles.sdropdownItem}>Request Leave</Text>
+              </Pressable>
+              <Pressable onPress={() => handleNavigate("/dashboards/hr/leave_status")}>
+                <Text style={styles.sdropdownItem}>Leave Status</Text>
+              </Pressable>
+            </View>
+          )}
+          <Pressable onPress={() => handleNavigate("/dashboards/hr/my_payslips")}>
+            <Text style={styles.sidebarItem}>My Payslips</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {!isWeb && menuVisible && (
         <View style={styles.menu}>
           <Pressable onPress={() => handleNavigate("/dashboards/hr/view_mng_emp_details")}>
             <Text style={styles.menuItem}>View & Manage Employee Details</Text>
@@ -93,7 +132,8 @@ const styles = StyleSheet.create({
   },
   navbar: {
     height: 60,
-    marginTop:55,
+    //marginTop:55,
+    marginTop: Platform.OS === "web" ? 15 : 55,
     paddingHorizontal: 16,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -124,7 +164,8 @@ const styles = StyleSheet.create({
   profileMenu: {
     position: "absolute",
     right: 10,
-    top: 110,
+    //top: 105,
+    top: Platform.OS === "web" ? 65 : 105,
     backgroundColor: "#f9f9f9",
     borderWidth: 1,
     borderColor: "#ccc",
@@ -141,5 +182,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingVertical: 8,
     color: '#22186F',
+  },
+  sdropdown: {
+    paddingLeft: 40,
+    backgroundColor: '#271D7A',
+  },
+  sdropdownItem: {
+    fontSize: 14,
+    paddingVertical: 8,
+    color: '#fff',
+  },
+  sidebar: {
+    position: 'absolute',
+    //top: 115,
+    top: Platform.OS === "web" ? 75 : 115,
+    left: 0,
+    width: 280,
+    backgroundColor: '#271D7A',
+    padding: 20,
+    paddingTop: 80, 
+    zIndex: 20,
+    borderRightWidth: 1,
+    borderColor: '#ccc',
+  },
+  sidebarItem: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 16,
   },
 });

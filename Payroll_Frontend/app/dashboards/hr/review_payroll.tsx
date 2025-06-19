@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text,TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text,TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getAccessToken } from '../../auth/index';
 import * as FileSystem from 'expo-file-system';
@@ -31,6 +31,14 @@ const GenPayslipPage = () => {
   const formattedMonth = `${month}-01`;
   const perform_category = params.perform_category as string;
 
+  const showAlert = (title: string, message: string) => {
+        if (Platform.OS === "web") {
+          window.alert(`${title}: ${message}`);
+        } else {
+          Alert.alert(title, message);
+        }
+  };
+
   // Fetch payroll data for employee and month
   const fetchPayroll = async () => {
     try {
@@ -54,7 +62,7 @@ const GenPayslipPage = () => {
       setPayroll(filtered);
       setReimbursementUpd(filtered.reimbursement.toString());
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load payroll data');
+      showAlert('Error', error.message || 'Failed to load payroll data');
       router.back();
     } finally {
       setLoading(false);
@@ -64,7 +72,7 @@ const GenPayslipPage = () => {
 
   useEffect(() => {
     if (!employee_id || !month) {
-      Alert.alert('Missing parameters', 'Employee ID and month are required');
+      showAlert('Missing parameters', 'Employee ID and month are required');
       router.back();
       return;
     }
@@ -73,9 +81,16 @@ const GenPayslipPage = () => {
 
   const handleUpdate = async () => {
     if (reimbursementUpd === '') {
-      Alert.alert('Validation Error', 'Please fill Reimbursement field');
+      showAlert('Validation Error', 'Please fill Reimbursement field');
       return;
     }
+
+    const reimbursementValue = parseFloat(reimbursementUpd);
+    if (isNaN(reimbursementValue)) {
+      showAlert('Validation Error', 'Reimbursement must be a number');
+      return;
+    }
+
     try{
       const token = await getAccessToken();
       setLoading(true);
@@ -98,10 +113,10 @@ const GenPayslipPage = () => {
         throw new Error('Failed to update payroll');
       }
       
-      Alert.alert('Success', 'Payroll updated successfully!');
+      showAlert('Success', 'Payroll updated successfully!');
       await fetchPayroll();
     } catch (error: any) {
-      Alert.alert("Error", "Something went wrong.");
+      showAlert("Error", "Something went wrong.");
     } finally {
         setLoading(false);
     }
@@ -130,19 +145,80 @@ const GenPayslipPage = () => {
       const backendMessage = responseData.message; // The success message from the backend
 
       if (pdfData) {
-        const fileUri = FileSystem.documentDirectory + `payslip_${employee_id}_${month}.pdf`;
-        // Encode the Latin-1 string back to bytes for FileSystem.writeAsStringAsync
-        const pdfDataB64 = btoa(pdfData);  
-        await FileSystem.writeAsStringAsync(fileUri, pdfDataB64, { encoding: FileSystem.EncodingType.Base64 }); 
-        Alert.alert('Success', backendMessage); // Display the message from the backend
-        await Sharing.shareAsync(fileUri); // Opens the PDF
+        if (Platform.OS === 'web') {
+          const cleanedPdfData = pdfData.replace(/\s/g, ''); // Remove all whitespace characters
+          // Step 1: Decode the cleaned base64 string to a binary string
+          const binaryString = atob(cleanedPdfData); 
+          // Step 2: Create a Uint8Array from the binary string
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+          }
+          // Step 3: Create a Blob from the Uint8Array
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          // Step 4: Create a URL for the Blob
+          const blobUrl = URL.createObjectURL(blob);
+          const fileName = `payslip_${employee_id}_${month}.pdf`;
+
+          const confirmDownload = window.confirm(
+            `${backendMessage}\n\nDo you want to download the payslip "${fileName}" ?`
+          );
+
+          if (confirmDownload) {
+            // Step 5: Create a temporary link element and trigger the download
+            const downloadLink = document.createElement('a');
+            downloadLink.href = blobUrl;
+            downloadLink.download = fileName;
+            document.body.appendChild(downloadLink); // Append to body (important for some browsers)
+            downloadLink.click();
+            document.body.removeChild(downloadLink); // Clean up
+          }
+
+          URL.revokeObjectURL(blobUrl); // Release the object URL
+          setTimeout(() => {
+            router.push('/dashboards/admin/mng_payroll');
+          }, 1000);
+
+        } else {
+          const fileUri = FileSystem.documentDirectory + `payslip_${employee_id}_${month}.pdf`;
+          await FileSystem.writeAsStringAsync(fileUri, pdfData, { encoding: FileSystem.EncodingType.Base64 }); 
+          //showAlert('Success', `${backendMessage}\n\nYou will now be prompted to download or share the Payslip.`); 
+          //await Sharing.shareAsync(fileUri);
+          Alert.alert(
+            'Payslip Ready',
+            `${backendMessage}\n\nWould you like to Download/Share ?`,
+            [
+              {
+                text: "No",
+                onPress: () => {
+                  router.push('/dashboards/admin/mng_payroll'); // Navigate immediately if user chooses "No"
+                },
+                style: "cancel"
+              },
+              {
+                text: "Download/Share",
+                onPress: async () => {
+                  try {
+                    await Sharing.shareAsync(fileUri);
+                  } catch (shareError: any) {
+                    showAlert('Sharing Error', `Failed to open/share: ${shareError.message || 'Unknown error'}`);
+                  }
+                  // Navigate AFTER sharing attempt (success or failure)
+                  router.push('/dashboards/admin/mng_payroll');
+                }
+              },
+            ],
+            { cancelable: false } // User must make a choice
+          );
+        }
       } else {
-        Alert.alert('Error', 'Payslip PDF data not received from the server.');
+        showAlert('Error', 'Payslip PDF data not received from the server.');
       }
 
     } catch (error: any) {
       console.error(error);
-      Alert.alert("Error", error.message || "Failed to generate or send payslip.");
+      showAlert("Error", error.message || "Failed to generate or send payslip.");
     } finally {
       setLoading(false);
     }
@@ -167,6 +243,7 @@ const GenPayslipPage = () => {
   return (
       <ScrollView style={styles.container}>
         <Text style={styles.headerTitle}>Review & Generate Payslip</Text>
+        <View style={styles.formWrapper}>
         <View style={styles.content}>
           {/* Display payroll fields */}
           <View style={styles.fieldRow}>
@@ -230,7 +307,7 @@ const GenPayslipPage = () => {
             <Text style={styles.ButtonText}>Generate</Text>
           </TouchableOpacity>
         </View>
-        
+        </View>
       </ScrollView>
     
   );
@@ -245,10 +322,20 @@ const styles = StyleSheet.create({
     paddingTop: 10, 
     paddingHorizontal: 10,
   },
+  formWrapper: {
+    width: "100%",
+    ...(Platform.OS === "web"
+      ? {
+          maxWidth: 600,
+          alignSelf: "center",
+        }
+      : {}),
+  },
   headerTitle: { 
     fontSize: 22,
     fontWeight: '600', 
-    marginBottom: 25,
+    marginTop: Platform.OS === "web" ? 25 : 5, 
+    marginBottom: Platform.OS === "web" ? 35 : 25,
     textAlign: "center", 
     color: '#22186F' 
   },
@@ -258,7 +345,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -284,7 +371,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 25,
-    gap: 120,
+    gap: Platform.OS === "web" ? 400 : 120,
   },
   updateButton: {
     flex: 1,

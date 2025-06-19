@@ -143,7 +143,7 @@ const AddEmployeeScreen = () => {
   };
 
   const handleSubmit = async () => {
-    console.log("Add button pressed");
+    
     if (!validateForm()) return;
 
     const showAlert = (title: string, message: string) => {
@@ -203,6 +203,7 @@ const AddEmployeeScreen = () => {
 
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+      <View style={styles.formWrapper}>
       <Text style={styles.heading}>Add New Employee</Text>
 
       {/* id */}
@@ -371,8 +372,7 @@ const AddEmployeeScreen = () => {
             borderColor: "#ccc",
             borderRadius: 6,
             fontSize: 16,
-            width: "100%",
-            marginBottom: 12,     
+            width: "100%",    
             backgroundColor: "#fff",
             boxSizing: "border-box", 
           }}
@@ -430,6 +430,7 @@ const AddEmployeeScreen = () => {
       <TouchableOpacity style={styles.buttonContainer} onPress={handleSubmit}>
         <Text style={styles.buttonText}>ADD</Text>
       </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };
@@ -439,17 +440,27 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#fff",
   },
+  formWrapper: {
+    width: "100%",
+    ...(Platform.OS === "web"
+      ? {
+          maxWidth: 800,
+          alignSelf: "center",
+        }
+      : {}),
+  },
   heading: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#22186F",
-    marginBottom: 20,
+    marginTop: Platform.OS === "web" ? 50 : 5,
+    marginBottom: Platform.OS === "web" ? 50 : 30,
     textAlign: "center",
   },
   label: {
     fontWeight: "600",
-    marginBottom: 4,
-    marginTop: 12,
+    marginBottom: 6,
+    marginTop: 14,
     color: "#333",
   },
   input: {
@@ -465,23 +476,25 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   pickerWrapper: {
-    borderWidth: 1,
+    borderWidth: Platform.OS === "web" ? 0 : 1,
     borderColor: "#ccc",
     borderRadius: 6,
     backgroundColor: "#fff",
-    marginBottom: 8,
-    marginTop: 5,
+    //marginBottom: 8,
+    //marginTop: 5,
   },
   picker: {
     borderColor: "#ccc",
     height: 50,
     width: "100%",
+    borderRadius: 6,
+    borderWidth: 1,
   },
   datePickerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
-    marginBottom: 10,
+    //marginTop: 8,
+    //marginBottom: 10,
   },
   datePicker: {
     flex: 1,
@@ -497,7 +510,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 30,
-    marginBottom:50,
+    marginBottom:30,
     backgroundColor: "#22186F",
     borderRadius: 10,
     overflow: "hidden",
