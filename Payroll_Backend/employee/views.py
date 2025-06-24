@@ -52,5 +52,6 @@ def login(request):
 @permission_classes([IsAuthenticated])
 def get_logged_in_employee(request):
     user = request.user
-    serializer = EmployeeSerializer(user)
-    return Response(serializer.data)
+    data = EmployeeSerializer(user).data
+    data["is_superuser"] = user.is_superuser
+    return Response(data)

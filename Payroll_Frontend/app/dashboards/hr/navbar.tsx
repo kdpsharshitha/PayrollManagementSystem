@@ -185,12 +185,12 @@ const styles = StyleSheet.create({
   },
   sdropdown: {
     paddingLeft: 40,
-    backgroundColor: '#271D7A',
+    backgroundColor: '#fff',
   },
   sdropdownItem: {
     fontSize: 14,
     paddingVertical: 8,
-    color: '#fff',
+    color: '#22186F',
   },
   sidebar: {
     position: 'absolute',
@@ -198,16 +198,20 @@ const styles = StyleSheet.create({
     top: Platform.OS === "web" ? 75 : 115,
     left: 0,
     width: 280,
-    backgroundColor: '#271D7A',
+    backgroundColor: '#fff',
     padding: 20,
     paddingTop: 80, 
     zIndex: 20,
     borderRightWidth: 1,
     borderColor: '#ccc',
+    shadowColor: "#000", // iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
   },
   sidebarItem: {
     fontSize: 16,
-    color: '#fff',
+    color: '#22186F',
     marginBottom: 16,
   },
 });

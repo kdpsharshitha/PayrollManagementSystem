@@ -41,6 +41,7 @@ const MngPayrollPage = () => {
   const [displayMonth, setDisplayMonth] = useState('');
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [loggedInEmployeeId, setLoggedInEmployeeId] = useState<string | null>(null);
+  const [isSuperUser, setIsSuperUser] = useState<boolean>(false);
   const [performanceCategory, setPerformanceCategory] = useState<string | null>(null);
   const [reimbursement, setReimbursement] = useState('');
   const [employeeDateJoined, setEmployeeDateJoined] = useState<Date | null>(null); 
@@ -57,7 +58,7 @@ const MngPayrollPage = () => {
       };
 
   useEffect(() => {
-    const fetchLoggedInEmployeeId = async () => {
+    const fetchLoggedInEmployeeInfo = async () => {
       const token = await getAccessToken();
 
       const response = await fetch('http://192.168.1.6:8000/api/employee/me/', {
@@ -72,10 +73,11 @@ const MngPayrollPage = () => {
         const data = await response.json();
         console.log(data.id);
         setLoggedInEmployeeId(data.id);
+        setIsSuperUser(data.is_superuser);
       }
     };
 
-    fetchLoggedInEmployeeId();
+    fetchLoggedInEmployeeInfo();
   }, []);
 
 
@@ -99,7 +101,12 @@ const MngPayrollPage = () => {
 
         const data = await response.json();
 
-        const formattedEmployees = data.filter((emp: Employee) => emp.id !== loggedInEmployeeId).sort((a: Employee, b: Employee) =>
+        const formattedEmployees = data.filter((emp: Employee) => {
+          if (!isSuperUser && emp.id === loggedInEmployeeId) return false;
+          if (!isSuperUser && emp.role === 'admin') return false;
+          return true;
+        })
+        .sort((a: Employee, b: Employee) =>
             a.id.toString().localeCompare(b.id.toString(), undefined, { numeric: true })
         ).map((emp: Employee) => ({
             label: `${emp.id} - ${emp.name} - ${emp.role}`,
@@ -116,7 +123,7 @@ const MngPayrollPage = () => {
     };
 
     fetchEmployees();
-  }, [loggedInEmployeeId]);
+  }, [loggedInEmployeeId, isSuperUser]);
 
   // Effect to filter employees based on search query
   useEffect(() => {

@@ -26,11 +26,10 @@ type Employee = {
 export default function EmployeeManagementScreen() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
+  const [loggedInEmployeeId, setLoggedInEmployeeId] = useState<string | null>(null);
+  const [isSuperUser, setIsSuperUser] = useState<boolean>(false);
+    
   const router = useRouter();
-
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
 
   const showAlert = (title: string, message: string) => {
         if (Platform.OS === "web") {
@@ -40,28 +39,64 @@ export default function EmployeeManagementScreen() {
         }
   };
 
-  const fetchEmployees = async () => {
-    try {
-      const token = await getAccessToken();
-      if (!token) {
-        showAlert("Authentication Error", "You are not logged in.");
-        return;
+  useEffect(() => {
+      const fetchLoggedInEmployeeInfo = async () => {
+        const token = await getAccessToken();
+  
+        const response = await fetch('http://192.168.1.6:8000/api/employee/me/', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        if (response.ok) {
+          const data = await response.json();
+          console.log(data.id);
+          setLoggedInEmployeeId(data.id);
+          setIsSuperUser(data.is_superuser);
+        }
+      };
+  
+      fetchLoggedInEmployeeInfo();
+  }, []);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      if (!loggedInEmployeeId) return;
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          showAlert("Authentication Error", "You are not logged in.");
+          return;
+        }
+
+        const res = await fetch("http://192.168.1.6:8000/api/employee/employees/", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch");
+        }
+
+        const data = await res.json();
+        const filtered = data.filter((emp: Employee) => {
+            if (!isSuperUser && emp.id === loggedInEmployeeId) return false;
+            if (!isSuperUser && emp.role === 'admin') return false;
+            return true;
+          })
+          .sort((a: Employee, b: Employee) => Number(a.id) - Number(b.id));
+        setEmployees(filtered);
+      } catch (error) {
+        console.error("Failed to fetch employees:", error);
+        showAlert('Error', 'Unable to fetch employees');
       }
+    };
+    
+    fetchEmployees();
+  }, [loggedInEmployeeId, isSuperUser]);
 
-      const res = await fetch("http://192.168.1.6:8000/api/employee/employees/", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch");
-      }
-
-      const data = await res.json();
-      setEmployees(data);
-    } catch (error) {
-      console.error("Failed to fetch employees:", error);
-    }
-  };
 
   const deleteEmployee = async (id: string) => {
     if (Platform.OS === "web") {
@@ -128,8 +163,8 @@ export default function EmployeeManagementScreen() {
 
   const renderItem = ({ item }: { item: Employee }) => (
     <View style={styles.card}>
-      <Text style={styles.name}>{item.name}</Text>
-      <Text>ID: {item.id}</Text>
+      <Text style={styles.name}>{item.name} {item.id === loggedInEmployeeId ? '(you)' : ''}</Text>
+      <Text>ID: {item.id} </Text>
       <Text>Email: {item.email}</Text>
       <Text>Role: {item.role}</Text>
       <Text>Designation: {item.designation}</Text>
