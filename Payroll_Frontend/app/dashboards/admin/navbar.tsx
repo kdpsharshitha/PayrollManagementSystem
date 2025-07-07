@@ -44,8 +44,14 @@ export default function Navbar() {
           <Pressable onPress={() => handleNavigate("/dashboards/admin/hr_leave_requests")}>
             <Text style={styles.sidebarItem}>Manage HR Leave Requests</Text>
           </Pressable>
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/mng_payroll")}>
+          {/* <Pressable onPress={() => handleNavigate("/dashboards/admin/mng_payroll")}>
             <Text style={styles.sidebarItem}>Manage Payroll</Text>
+          </Pressable> */}
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/new_mng_payroll")}>
+            <Text style={styles.sidebarItem}>Generate Payroll & Email</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/view_payroll")}>
+            <Text style={styles.sidebarItem}>Review & Edit Payroll</Text>
           </Pressable>
           <Pressable onPress={() => handleNavigate("/dashboards/admin/my_payslips")}>
             <Text style={styles.sidebarItem}>My Payslips</Text>
@@ -65,8 +71,14 @@ export default function Navbar() {
           <Pressable onPress={() => handleNavigate("/dashboards/admin/hr_leave_requests")}>
             <Text style={styles.menuItem}>Manage HR Leave Requests</Text>
           </Pressable>
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/mng_payroll")}>
+          {/* <Pressable onPress={() => handleNavigate("/dashboards/admin/mng_payroll")}>
             <Text style={styles.menuItem}>Manage Payroll</Text>
+          </Pressable> */}
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/new_mng_payroll")}>
+            <Text style={styles.menuItem}>Generate Payroll & Email</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/view_payroll")}>
+            <Text style={styles.menuItem}>Review & Edit Payroll</Text>
           </Pressable>
           <Pressable onPress={() => handleNavigate("/dashboards/admin/my_payslips")}>
             <Text style={styles.menuItem}>My Payslips</Text>

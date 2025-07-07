@@ -46,7 +46,7 @@ const Storage = {
 // Base URL config (you can also inject via EAS config / env vars)
 const API_HOST =
   Constants.expoConfig?.extra?.API_URL ||
-  'http://192.168.1.6:8000';
+  'http://192.168.1.3:8000';
 
 const LoginScreen: React.FC = () => {
   const router = useRouter();

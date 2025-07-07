@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 from decouple import config
+import os
+
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -175,3 +177,44 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')  # ✅ Replace with your email
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')   # ✅ Use App Password (not your actual Gmail password)
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+PAYSLIP_STORAGE_DIR = os.path.join(MEDIA_ROOT, 'payslips')
+PAYSLIP_ARCHIVE_DIR = os.path.join(MEDIA_ROOT, 'payslips_archive')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',  # Or 'DEBUG', 'WARNING', 'ERROR', 'CRITICAL'
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(MEDIA_ROOT, 'payroll_operations.log'), # Path to your log file
+            'formatter': 'verbose',
+        },
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'payroll_operations': {  # This is the name of your custom logger
+            'handlers': ['file', 'console'], # You can choose to log to file, console, or both
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+DEBUG = True

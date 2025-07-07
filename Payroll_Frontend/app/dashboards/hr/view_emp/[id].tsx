@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 //import * as SecureStore from "expo-secure-store";
 import { getAccessToken } from "../../../auth/index";
-
+import { BASE_URL } from "../../../../config";
 
 type Employee = {
   id: string;
@@ -12,6 +12,8 @@ type Employee = {
   email: string;
   gender: string;
   account_type: string;
+  account_name: string;
+  ifsc_code: string;
   pan_no: string;
   phone_no: string;
   emergency_phone_no: string;
@@ -20,6 +22,8 @@ type Employee = {
   role: string;
   designation: string;
   date_joined: string;
+  supervisor: string;
+  supervisor_email: string;
   fee_per_month: string;
   pay_structure: string;
 };
@@ -52,7 +56,7 @@ export default function ViewEmployee() {
         return;
       }
 
-      const res = await fetch(`http://192.168.1.6:8000/api/employee/employees/${empId}/`, {
+      const res = await fetch(`${BASE_URL}/api/employee/employees/${empId}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -74,7 +78,9 @@ export default function ViewEmployee() {
     { key: "name", label: "Name" },
     { key: "email", label: "Email" },
     { key: "gender", label: "Gender" },
-    { key: "account_type", label: "Account Type" },
+    { key: "account_type", label: "Bank Name" },
+    { key: "account_name", label: "Account Holder Name" },
+    { key: "ifsc_code", label: "IFSC Code" },
     { key: "pan_no", label: "PAN Number" },
     { key: "phone_no", label: "Phone Number" },
     { key: "emergency_phone_no", label: "Emergency Phone" },
@@ -83,6 +89,8 @@ export default function ViewEmployee() {
     { key: "role", label: "Role" },
     { key: "designation", label: "Designation" },
     { key: "date_joined", label: "Date Joined" },
+    { key: "supervisor", label: "Assigned Supervisor" },
+    { key: "supervisor_email", label: "Supervisor Email" },
     { key: "fee_per_month", label: "Fee Per Month" },
     { key: "pay_structure", label: "Pay Structure" },
   ];

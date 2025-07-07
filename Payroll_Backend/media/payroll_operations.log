@@ -1,0 +1,4 @@
+INFO 2025-07-07 18:49:25,214 views 14652 21496 Received request to generate/update payroll.
+INFO 2025-07-07 18:49:25,243 views 14652 21496 Payroll UPDATED for employee: 100101 - Harshitha for month: 2025-04 by 100101. Reimbursement proof changed from 'payslip_100101_2025-04_1.pdf' to 'payslip_100101_2025-04.pdf'.
+INFO 2025-07-07 18:49:25,247 views 14652 21496 Payroll computation triggered and saved for employee 100101 for month 2025-04.
+

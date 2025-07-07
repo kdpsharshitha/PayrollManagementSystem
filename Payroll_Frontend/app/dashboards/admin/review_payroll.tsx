@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getAccessToken } from '../../auth/index';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-
+import { BASE_URL } from "../../../config";
 
 interface PayrollData {
   employee: string;
@@ -45,7 +45,7 @@ const GenPayslipPage = () => {
 
       const token = await getAccessToken();
       setLoading(true);
-      const response = await fetch(`http://192.168.1.6:8000/api/payroll/payroll/`,{
+      const response = await fetch(`${BASE_URL}/api/payroll/payroll/`,{
           method: 'GET',
           headers: {
               'Authorization': `Bearer ${token}`,
@@ -95,7 +95,7 @@ const GenPayslipPage = () => {
       const token = await getAccessToken();
       setLoading(true);
 
-      const response = await fetch('http://192.168.1.6:8000/api/payroll/generate/', {
+      const response = await fetch(`${BASE_URL}/api/payroll/generate/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -126,7 +126,7 @@ const GenPayslipPage = () => {
     try {
       setLoading(true);
       const token = await getAccessToken();
-      const apiUrl = `http://192.168.1.6:8000/api/payroll/generate_payslip/?employee_id=${employee_id}&month=${month}`;
+      const apiUrl = `${BASE_URL}/api/payroll/generate_payslip/?employee_id=${employee_id}&month=${month}`;
       
       const response = await fetch(apiUrl, {
         method: 'GET',

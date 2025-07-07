@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { Ionicons, Feather, MaterialIcons } from "@expo/vector-icons";
 //import * as SecureStore from "expo-secure-store";
 import { getAccessToken } from "../../auth/index";
+import { BASE_URL } from "../../../config";
 
 type Employee = {
   id: string;
@@ -43,7 +44,7 @@ export default function EmployeeManagementScreen() {
       const fetchLoggedInEmployeeInfo = async () => {
         const token = await getAccessToken();
   
-        const response = await fetch('http://192.168.1.6:8000/api/employee/me/', {
+        const response = await fetch(`${BASE_URL}/api/employee/me/`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -72,7 +73,7 @@ export default function EmployeeManagementScreen() {
           return;
         }
 
-        const res = await fetch("http://192.168.1.6:8000/api/employee/employees/", {
+        const res = await fetch(`${BASE_URL}/api/employee/employees/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -109,7 +110,7 @@ export default function EmployeeManagementScreen() {
           return;
         }
 
-        await fetch(`http://192.168.1.6:8000/api/employee/employees/${id}/`, {
+        await fetch(`${BASE_URL}/api/employee/employees/${id}/`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -133,7 +134,7 @@ export default function EmployeeManagementScreen() {
                 return;
               }
 
-              await fetch(`http://192.168.1.6:8000/api/employee/employees/${id}/`, {
+              await fetch(`${BASE_URL}/api/employee/employees/${id}/`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
               });

@@ -18,22 +18,39 @@ from django.http import FileResponse
 from rest_framework.permissions import IsAuthenticated
 import io
 import os
+import shutil
 from reportlab.lib.units import mm
 from django.conf import settings
 from django.core.mail import EmailMessage
 import base64
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.parsers import MultiPartParser, FormParser
+from decimal import Decimal
+import logging
 
 class PayrollViewSet(viewsets.ModelViewSet):
     queryset = Payroll.objects.all()
     serializer_class = PayrollSerializer
 
-
+payroll_logger = logging.getLogger('payroll_operations')
 class GeneratePayrollAPIView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [IsAuthenticated]
     def post(self, request):
+        payroll_logger.info("Received request to generate/update payroll.")
+        # print("Request content-type:", request.content_type)
+        # print("FILES:", request.FILES)
+        # print("DATA:", request.data)
+
         employee_id = request.data.get('employee_id')
         month_str = request.data.get('month')  # e.g., '2025-05'
         perform_category = request.data.get('perform_category')
-        reimbursement = request.data.get('reimbursement', 0)
+        reimbursement = Decimal(request.data.get('reimbursement', 0))
+        reimbursement_proof = request.FILES.get('reimbursement_proof')
+
+        # Get the user who performed the action
+        performed_by_user = request.user.id if request.user.is_authenticated else "Anonymous"
+
 
         if not all([employee_id, month_str, perform_category]):
             return Response({"error": "Missing required fields."}, status=status.HTTP_400_BAD_REQUEST)
@@ -49,9 +66,66 @@ class GeneratePayrollAPIView(APIView):
 
                 # Create or update Payroll
                 payroll, created = Payroll.objects.get_or_create(employee=employee, month=month)
+
+                # Store old values for detailed logging if updating
+                old_perform_category = payroll.perform_category
+                old_reimbursement = payroll.reimbursement
+                old_reimbursement_proof_name = os.path.basename(payroll.reimbursement_proof.name) if payroll.reimbursement_proof else None
+
                 payroll.perform_category = perform_category
                 payroll.reimbursement = reimbursement
+                if reimbursement > 0:
+                    # If reimbursement is positive, attempt to set or clear proof based on upload
+                    if reimbursement_proof:
+                        if payroll.reimbursement_proof:
+                            if payroll.reimbursement_proof.file != reimbursement_proof:
+                                payroll.reimbursement_proof.delete(save=False) # Delete old file
+                        payroll.reimbursement_proof = reimbursement_proof
+                    else:
+                        if payroll.reimbursement_proof:
+                            payroll.reimbursement_proof.delete(save=False) # Delete old file
+                        payroll.reimbursement_proof = None
+                else: 
+                    if payroll.reimbursement_proof:
+                        payroll.reimbursement_proof.delete(save=False) # delete=False prevents saving DB here
+                    payroll.reimbursement_proof = None
+
+                if created:
+                    log_message_parts = [
+                        f"Payroll GENERATED for employee: {employee.name} (ID: {employee_id}) ",
+                        f"for month: {month_str} by {performed_by_user}. ",
+                        f"Initial perform_category: {perform_category}, reimbursement: {reimbursement}."
+                    ]
+                    if payroll.reimbursement_proof:
+                        log_message_parts.append(f" Reimbursement proof: '{payroll.reimbursement_proof.name}'.")
+                    else:
+                        log_message_parts.append(" No reimbursement proof expected/provided (reimbursement is zero).")
+
+                    payroll_logger.info("".join(log_message_parts))
+                else:
+                    log_message_parts = [
+                        f"Payroll UPDATED for employee: {employee_id} - {employee.name} "
+                        f"for month: {month_str} by {performed_by_user}."
+                    ]
+                    
+                    if old_reimbursement != reimbursement:
+                        log_message_parts.append(
+                            f" Reimbursement changed from '{old_reimbursement}' to '{reimbursement}'."
+                        )
+                    
+                    new_reimbursement_proof_name = payroll.reimbursement_proof.name if payroll.reimbursement_proof else None
+                    if old_reimbursement_proof_name and not new_reimbursement_proof_name:
+                        log_message_parts.append(f" Reimbursement proof '{old_reimbursement_proof_name}' removed.")
+                    elif not old_reimbursement_proof_name and new_reimbursement_proof_name:
+                        log_message_parts.append(f" Reimbursement proof '{new_reimbursement_proof_name}' added.")
+                    elif old_reimbursement_proof_name and new_reimbursement_proof_name and old_reimbursement_proof_name != new_reimbursement_proof_name:
+                        log_message_parts.append(f" Reimbursement proof changed from '{old_reimbursement_proof_name}' to '{new_reimbursement_proof_name}'.")
+
+                    payroll_logger.info("".join(log_message_parts))
+
+
                 payroll.save()  # Triggers payroll computation
+                payroll_logger.info(f"Payroll computation triggered and saved for employee {employee_id} for month {month_str}.\n")
 
                 return Response({
                     "leave_details": LeaveDetailsSerializer(leave_record).data,
@@ -109,6 +183,8 @@ class GeneratePayslipPDFView(APIView):
         fee_value_style = ParagraphStyle(name='FeeValue', parent=normal, fontSize=9, alignment=2)
         fee_total_style = ParagraphStyle(name='FeeTotal', parent=bold, fontSize=9, alignment=1)
 
+        gen_style = ParagraphStyle(name='Gen', parent=normal, fontSize=9, alignment=1)
+        
         leave_heading_style = ParagraphStyle(name='LeaveHeading', parent=bold, fontSize=10, alignment=1)
         leave_table_header_style = ParagraphStyle(name='LeaveTableHeader', parent=bold, fontSize=9, alignment=1)
         leave_table_value_style = ParagraphStyle(name='LeaveTableValue', parent=normal, fontSize=9, alignment=1)
@@ -199,20 +275,20 @@ class GeneratePayslipPDFView(APIView):
             # (Row 1)
             ['', '', '', '','', Paragraph('Total', fee_total_style)],
             #(Row 2)
-            [Paragraph(f'Month : <b>{payroll.month.strftime("%B")}</b>', fee_label_style), '', '', '', '', ''],
+            [Paragraph(f'Month : <b>{payroll.month.strftime("%B")}</b>', fee_label_style), Paragraph('Base Pay Earned :', fee_label_style) ,Paragraph(f"{payroll.base_pay_earned:,.2f}", fee_value_style), '','',''],
             # (Row 3)
-            [Paragraph(f'Working Days : {leave.working_days}', fee_label_style),Paragraph('Fee Earned :', fee_label_style) ,Paragraph(f"{payroll.fee_earned:,.2f}", fee_value_style), Paragraph('TDS Deducted :', fee_label_style),Paragraph(f"{payroll.tds:,.2f}", fee_value_style) ,Paragraph(f"{(payroll.fee_earned - payroll.tds):,.2f}", fee_value_style)],
+            [Paragraph(f'Working Days : {leave.working_days}', fee_label_style),Paragraph('Variable Pay Earned :', fee_label_style) ,Paragraph(f"{payroll.perform_comp_payable:,.2f}", fee_value_style), '','',''],
             # (Row 4)
-            [Paragraph(f'Days Worked : {leave.days_worked}', fee_label_style), Paragraph('Reimbursement :', fee_label_style), Paragraph(f"{payroll.reimbursement:,.2f}", fee_value_style), '', '', Paragraph(f"{payroll.reimbursement:,.2f}", fee_value_style)],
+            [Paragraph(f'Days Worked : {leave.days_worked}', fee_label_style), Paragraph('Fee Earned :', fee_label_style) ,Paragraph(f"{payroll.fee_earned:,.2f}", fee_value_style), Paragraph('TDS Deducted :', fee_label_style),Paragraph(f"{payroll.tds:,.2f}", fee_value_style) ,Paragraph(f"{(payroll.fee_earned - payroll.tds):,.2f}", fee_value_style)],
             # (Row 5)
-            [Paragraph(f'Absent Days : {leave.absent_days}', fee_label_style), '', '', '', '', ''],
+            [Paragraph(f'Absent Days : {leave.absent_days}', fee_label_style), Paragraph('Reimbursement :', fee_label_style), Paragraph(f"{payroll.reimbursement:,.2f}", fee_value_style), '', '', Paragraph(f"{payroll.reimbursement:,.2f}", fee_value_style)],
             # (Row 6)
             [Paragraph('Total', fee_total_style), '', Paragraph(f"{(payroll.fee_earned + payroll.reimbursement):,.2f}", fee_value_style), '', Paragraph(f"{payroll.tds:,.2f}", fee_value_style),Paragraph(f"{(payroll.fee_earned - payroll.tds + payroll.reimbursement):,.2f}", fee_value_style)],
             # Net Fee Earned row (Row 7)
-            [Paragraph('Net Fee Earned :', fee_header_style),Paragraph(f"{payroll.net_fee_earned}", fee_net_style), '', '', '', ''],
+            [Paragraph('Net Fee Earned :', fee_header_style),Paragraph(f"{payroll.net_fee_earned}", fee_net_style), '', Paragraph(f"Generated On : {payroll.generated_on.strftime('%d/%m/%Y')},{payroll.generated_time.strftime('%H:%M:%S')}", gen_style), '', ''],
         ]
 
-        fee_col_widths = [120, 85, 60, 85, 60, 90] # Adjusted to sum to page width (~500 points)
+        fee_col_widths = [120, 100, 60, 85, 55, 80] # Adjusted to sum to page width (~500 points)
 
         fee_table = Table(fee_table_data, colWidths=fee_col_widths)
         fee_table.setStyle(TableStyle([
@@ -226,6 +302,7 @@ class GeneratePayslipPDFView(APIView):
             ('LINEBELOW', (0, 5), (-1, 6), 0.75, colors.black),
             ('LINEBELOW', (0, 2), (-1, 4), 0.35, colors.lightgrey),
             ('SPAN', (0, 0), (-1, 0)), # 'Consultant Fee Details'
+            ('SPAN', (3, -1), (5, -1)),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('TOPPADDING', (0,0), (-1,-1), 4),
@@ -274,30 +351,92 @@ class GeneratePayslipPDFView(APIView):
         ]))
         elements.append(wrapper_table)
 
-
         doc.build(elements)
         buffer.seek(0)
+
+        generated_date_for_filename = payroll.generated_on.strftime('%Y-%m-%d')
+        generated_time_for_filename = payroll.generated_time.strftime('%H-%M-%S')
+        saved_filename = f"payslip_{employee_id}_{month_str}_gen-{generated_date_for_filename},{generated_time_for_filename}.pdf"
+
+        # Create the full path for the file
+        payslip_folder = settings.PAYSLIP_STORAGE_DIR # Use the path from settings
+        payslip_archive_folder = settings.PAYSLIP_ARCHIVE_DIR
+
+        os.makedirs(payslip_folder, exist_ok=True) # Create folder if it doesn't exist
+        os.makedirs(payslip_archive_folder, exist_ok=True)
+
+        payslip_prefix_to_match = f"payslip_{employee_id}_{month_str}_"
+        moved_payslips_count = 0
+
+        # Iterate through files in the current payslip storage directory
+        for existing_filename in os.listdir(payslip_folder):
+            if (existing_filename.startswith(payslip_prefix_to_match) and existing_filename.endswith('.pdf') and existing_filename != saved_filename):
+                old_file_path = os.path.join(payslip_folder, existing_filename)
+                archive_file_path = os.path.join(payslip_archive_folder, existing_filename)
+                
+                try:
+                    # Move the old payslip to the archive folder
+                    shutil.move(old_file_path, archive_file_path)
+                    moved_payslips_count += 1
+                    print(f"Moved old payslip '{existing_filename}' to archive.")
+                except Exception as e:
+                    print(f"Error moving old payslip '{existing_filename}' to archive: {e}")
+                    # Log the error but continue to try saving the new one
+        
+        # Prepare message about moved payslips
+        archive_message = ""
+        if moved_payslips_count > 0:
+            archive_message = f" {moved_payslips_count} old payslip(s) moved to archive."
+        
+        file_path = os.path.join(payslip_folder, saved_filename)
+
+        try:
+            with open(file_path, 'wb') as f:
+                f.write(buffer.getvalue()) # Write the PDF content to the file
+            print(f"Payslip saved to: {file_path}") # Log for confirmation
+            file_saved_message = f"Payslip saved to payslips folder." + archive_message
+        except IOError as e:
+            print(f"Error saving payslip to file: {e}")
+            file_saved_message = f"Error saving payslip to folder: {str(e)}" + archive_message
+
+        filename = f"payslip_{employee_id}_{month_str}.pdf"
 
         # Compose Email
         subject = f"Payslip for {payroll.month.strftime('%B %Y')}"
         body = f"Dear {payroll.employee.name},\n\nPlease find the attached payslip for {payroll.month.strftime('%B %Y')}.\n\nBest Regards,\nJivass Technologies"
         to_email = payroll.employee.email
 
+        email_message = "" # Initialize email message
+        email_status_code = status.HTTP_200_OK
+
         if not to_email:
-            return Response({"message": "Payslip generated, but email could not be sent (missing employee email).", "pdf_data": buffer.getvalue().decode('latin-1')}, status=status.HTTP_200_OK)
-        
-        email = EmailMessage(subject, body, to=[to_email])
-        filename = f"payslip_{employee_id}_{month_str}.pdf"
-        email.attach(filename, buffer.read(), 'application/pdf')
-        email.send()
+            email_message = "Email could not be sent (missing employee email)."
+        else:
+            try:
+                email = EmailMessage(subject, body, to=[to_email])
+                buffer.seek(0)
+                email.attach(filename, buffer.read(), 'application/pdf') 
+                email.send()
+                email_message = "Payslip emailed successfully."
+            except Exception as e:
+                email_message = f"Payslip generated, but failed to email: {str(e)}"
+                email_status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+                # Log the error for debugging
+                print(f"Error sending email for employee {employee_id}, month {month_str}: {e}")
 
         buffer.seek(0)
 
         pdf_binary_data = buffer.getvalue()
         pdf_base64_string = base64.b64encode(pdf_binary_data).decode('utf-8')
 
-        return Response({"message": "Payslip generated and emailed successfully.", "pdf_data": pdf_base64_string}, status=status.HTTP_200_OK)
-    
+        final_message = f"Payslip generated. {file_saved_message}. {email_message}"
+
+        return Response({
+            "message": final_message,
+            "pdf_data": pdf_base64_string,
+            "saved_path": file_path # Include the saved path in the response
+        }, status=email_status_code if email_status_code != status.HTTP_200_OK else status.HTTP_200_OK)
+
 
 class DownloadPayslipPDFView(APIView):
 
@@ -338,6 +477,8 @@ class DownloadPayslipPDFView(APIView):
         fee_value_style = ParagraphStyle(name='FeeValue', parent=normal, fontSize=9, alignment=2)
         fee_total_style = ParagraphStyle(name='FeeTotal', parent=bold, fontSize=9, alignment=1)
 
+        gen_style = ParagraphStyle(name='Gen', parent=normal, fontSize=9, alignment=1)
+
         leave_heading_style = ParagraphStyle(name='LeaveHeading', parent=bold, fontSize=10, alignment=1)
         leave_table_header_style = ParagraphStyle(name='LeaveTableHeader', parent=bold, fontSize=9, alignment=1)
         leave_table_value_style = ParagraphStyle(name='LeaveTableValue', parent=normal, fontSize=9, alignment=1)
@@ -428,20 +569,20 @@ class DownloadPayslipPDFView(APIView):
             # (Row 1)
             ['', '', '', '','', Paragraph('Total', fee_total_style)],
             #(Row 2)
-            [Paragraph(f'Month : <b>{payroll.month.strftime("%B")}</b>', fee_label_style), '', '', '', '', ''],
+            [Paragraph(f'Month : <b>{payroll.month.strftime("%B")}</b>', fee_label_style), Paragraph('Base Pay Earned :', fee_label_style) ,Paragraph(f"{payroll.base_pay_earned:,.2f}", fee_value_style), '','',''],
             # (Row 3)
-            [Paragraph(f'Working Days : {leave.working_days}', fee_label_style),Paragraph('Fee Earned :', fee_label_style) ,Paragraph(f"{payroll.fee_earned:,.2f}", fee_value_style), Paragraph('TDS Deducted :', fee_label_style),Paragraph(f"{payroll.tds:,.2f}", fee_value_style) ,Paragraph(f"{(payroll.fee_earned - payroll.tds):,.2f}", fee_value_style)],
+            [Paragraph(f'Working Days : {leave.working_days}', fee_label_style),Paragraph('Variable Pay Earned :', fee_label_style) ,Paragraph(f"{payroll.perform_comp_payable:,.2f}", fee_value_style), '','',''],
             # (Row 4)
-            [Paragraph(f'Days Worked : {leave.days_worked}', fee_label_style), Paragraph('Reimbursement :', fee_label_style), Paragraph(f"{payroll.reimbursement:,.2f}", fee_value_style), '', '', Paragraph(f"{payroll.reimbursement:,.2f}", fee_value_style)],
+            [Paragraph(f'Days Worked : {leave.days_worked}', fee_label_style), Paragraph('Fee Earned :', fee_label_style) ,Paragraph(f"{payroll.fee_earned:,.2f}", fee_value_style), Paragraph('TDS Deducted :', fee_label_style),Paragraph(f"{payroll.tds:,.2f}", fee_value_style) ,Paragraph(f"{(payroll.fee_earned - payroll.tds):,.2f}", fee_value_style)],
             # (Row 5)
-            [Paragraph(f'Absent Days : {leave.absent_days}', fee_label_style), '', '', '', '', ''],
+            [Paragraph(f'Absent Days : {leave.absent_days}', fee_label_style), Paragraph('Reimbursement :', fee_label_style), Paragraph(f"{payroll.reimbursement:,.2f}", fee_value_style), '', '', Paragraph(f"{payroll.reimbursement:,.2f}", fee_value_style)],
             # (Row 6)
             [Paragraph('Total', fee_total_style), '', Paragraph(f"{(payroll.fee_earned + payroll.reimbursement):,.2f}", fee_value_style), '', Paragraph(f"{payroll.tds:,.2f}", fee_value_style),Paragraph(f"{(payroll.fee_earned - payroll.tds + payroll.reimbursement):,.2f}", fee_value_style)],
             # Net Fee Earned row (Row 7)
-            [Paragraph('Net Fee Earned :', fee_header_style),Paragraph(f"{payroll.net_fee_earned}", fee_net_style), '', '', '', ''],
+            [Paragraph('Net Fee Earned :', fee_header_style),Paragraph(f"{payroll.net_fee_earned}", fee_net_style), '', Paragraph(f"Generated On : {payroll.generated_on.strftime('%d/%m/%Y')},{payroll.generated_time.strftime('%H:%M:%S')}", gen_style), '', ''],
         ]
 
-        fee_col_widths = [120, 85, 60, 85, 60, 90] # Adjusted to sum to page width (~500 points)
+        fee_col_widths = [120, 100, 60, 85, 55, 80] # Adjusted to sum to page width (~500 points)
 
         fee_table = Table(fee_table_data, colWidths=fee_col_widths)
         fee_table.setStyle(TableStyle([
@@ -455,6 +596,7 @@ class DownloadPayslipPDFView(APIView):
             ('LINEBELOW', (0, 5), (-1, 6), 0.75, colors.black),
             ('LINEBELOW', (0, 2), (-1, 4), 0.35, colors.lightgrey),
             ('SPAN', (0, 0), (-1, 0)), # 'Consultant Fee Details'
+            ('SPAN', (3, -1), (5, -1)),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('TOPPADDING', (0,0), (-1,-1), 4),
@@ -503,7 +645,6 @@ class DownloadPayslipPDFView(APIView):
         ]))
         elements.append(wrapper_table)
 
-
         doc.build(elements)
         buffer.seek(0)
         
@@ -527,3 +668,75 @@ class MyPayslipsAPIView(APIView):
             for p in payslips
         ]
         return Response(data)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def monthly_employees_view(request):
+    month_str = request.GET.get('month')
+    if not month_str:
+        return Response({"error": "Month required (YYYY-MM)"}, status=400)
+
+    try:
+        month_date = datetime.strptime(month_str, "%Y-%m").date().replace(day=1)
+    except ValueError:
+        return Response({"error": "Invalid format, use YYYY-MM"}, status=400)
+
+    employees_for_month = []
+    payroll_exists = False
+    existing_payroll_data = []
+
+    # Fetch all employees relevant to the selected month
+    all_relevant_employees = Employee.objects.filter(
+        # Only include employees who joined on or before the selected month
+        # This is more efficient than iterating all employees in Python
+        date_joined__year__lte=month_date.year,
+        date_joined__month__lte=month_date.month
+    ).order_by('id')
+
+
+    # Fetch all payroll records for the given month in one query
+    # and select_related to get employee data efficiently
+    payroll_records_for_month = Payroll.objects.filter(
+        month=month_date
+    ).select_related('employee')
+
+    # Determine if payroll already exists for this month
+    if payroll_records_for_month.exists():
+        payroll_exists = True
+        # Serialize existing payroll data
+        existing_payroll_data = PayrollSerializer(payroll_records_for_month, many=True, context={'request': request}).data
+
+    # Create a dictionary for quick lookup of existing payroll by employee ID
+    payroll_by_employee_id = {str(p.employee.id): p for p in payroll_records_for_month}
+
+
+    for emp in all_relevant_employees:
+        emp_data = {
+            "id": emp.id,
+            "name": emp.name,
+            "role": emp.role,
+            "pay_structure": emp.pay_structure,
+            # Default values if no payroll exists for this employee this month
+            "perform_category": "",
+            "reimbursement": 0.0,
+            "reimbursement_proof": None, # Default to None
+        }
+
+        # If payroll exists for this employee for this month, override defaults
+        if str(emp.id) in payroll_by_employee_id:
+            payroll_instance = payroll_by_employee_id[str(emp.id)]
+
+            serialized_payroll = PayrollSerializer(payroll_instance, context={'request': request}).data
+
+            emp_data["perform_category"] = serialized_payroll.get("perform_category", "")
+            emp_data["reimbursement"] = float(serialized_payroll.get("reimbursement", 0))
+            # Get the absolute URL from the serialized output
+            emp_data["reimbursement_proof"] = serialized_payroll.get("reimbursement_proof", None)
+        employees_for_month.append(emp_data)
+
+
+    return Response({
+        "employees": employees_for_month,
+        "payroll_exists": payroll_exists,
+        "payroll_data": existing_payroll_data # Optionally, you can send this too, though the merged 'employees' might be enough
+    }, status=200)

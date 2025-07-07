@@ -25,7 +25,14 @@ class Payroll(models.Model):
     tds = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     reimbursement = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     net_fee_earned = models.IntegerField(default=0)
-    generated_on = models.DateField(auto_now_add=True)
+    generated_on = models.DateField(auto_now=True)
+    generated_time = models.TimeField(auto_now=True)
+    reimbursement_proof = models.FileField(
+        upload_to='reimbursement_proofs/', 
+        null=True, 
+        blank=True,
+        help_text="Upload PDF proof for reimbursement"
+    )
 
     class Meta:
         unique_together = ('employee', 'month')

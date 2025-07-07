@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { getAccessToken } from '../../auth/index';
+import { BASE_URL } from "../../../config";
 
 interface Employee {
   id: string;
@@ -61,7 +62,7 @@ const MngPayrollPage = () => {
       try {
         const token = await getAccessToken();
 
-        const response = await fetch('http://192.168.1.6:8000/api/employee/employees/', {
+        const response = await fetch(`${BASE_URL}/api/employee/employees/`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -169,7 +170,7 @@ const MngPayrollPage = () => {
     try {
       const token = await getAccessToken();
 
-      const response = await fetch('http://192.168.1.6:8000/api/payroll/generate/', {
+      const response = await fetch(`${BASE_URL}/api/payroll/generate/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

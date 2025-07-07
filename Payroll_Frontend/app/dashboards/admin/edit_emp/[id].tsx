@@ -17,6 +17,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 //import * as SecureStore from "expo-secure-store";
 import { getAccessToken } from "../../../auth/index";
+import { BASE_URL } from "../../../../config";
 
 
 interface FormData {
@@ -35,6 +36,10 @@ interface FormData {
   date_joined: Date | null;
   fee_per_month: string;
   pay_structure: "fixed" | "variable";
+  account_name: string;
+  ifsc_code: string;
+  supervisor: string;
+  supervisor_email: string;
 }
 
 const EditEmployeeScreen = () => {
@@ -43,6 +48,7 @@ const EditEmployeeScreen = () => {
   const [formData, setFormData] = useState<FormData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [employees, setEmployees] = useState<{ id: string; name: string; email: string }[]>([]);
 
   const showAlert = (title: string, message: string) => {
         if (Platform.OS === "web") {
@@ -56,7 +62,7 @@ const EditEmployeeScreen = () => {
     const fetchEmployee = async () => {
       try {
         const token = await getAccessToken();
-        const res = await fetch(`http://192.168.1.6:8000/api/employee/employees/${id}/`, {
+        const res = await fetch(`${BASE_URL}/api/employee/employees/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -66,6 +72,8 @@ const EditEmployeeScreen = () => {
           email: data.email,
           gender: data.gender,
           account_type: data.account_type,
+          account_name: data.account_name,
+          ifsc_code: data.ifsc_code,
           pan_no: data.pan_no,
           phone_no: data.phone_no,
           emergency_phone_no: data.emergency_phone_no,
@@ -74,9 +82,18 @@ const EditEmployeeScreen = () => {
           role: data.role,
           designation: data.designation,
           date_joined: new Date(data.date_joined),
+          supervisor: data.supervisor,
+          supervisor_email: data.supervisor_email,
           fee_per_month: data.fee_per_month.toString(),
           pay_structure: data.pay_structure,
         });
+
+        // Fetch all employees for supervisor dropdown
+        const empRes = await fetch(`${BASE_URL}/api/employee/employees/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const allEmps = await empRes.json();
+        setEmployees(allEmps);
         
         setLoading(false);
       } catch (err) {
@@ -87,7 +104,14 @@ const EditEmployeeScreen = () => {
   }, [id]);
 
   const handleChange = <K extends keyof FormData>(key: K, value: FormData[K]) => {
-    if (formData) setFormData({ ...formData, [key]: value });
+    if (formData) 
+      setFormData((prev) => {
+        if (!prev) return null; // safeguard
+        return {
+          ...prev,
+          [key]: value,
+        };
+      });
   };
 
   const validateForm = () => {
@@ -95,6 +119,7 @@ const EditEmployeeScreen = () => {
 
     const phoneRegex = /^\d{10}$/;
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!formData.name.trim()) {
       showAlert("Validation Error", "Name is required.");
@@ -125,6 +150,26 @@ const EditEmployeeScreen = () => {
       return false;
     }
 
+    if (!formData.account_name.trim()) {
+      showAlert("Validation Error", "Account name is required.");
+      return false;
+    }
+
+    if (!formData.ifsc_code.trim()) {
+      showAlert("Validation Error", "IFSC Code is required.");
+      return false;
+    }
+
+    if (!formData.supervisor || formData.supervisor.trim() === "") {
+      showAlert("Validation Error", "Please select a supervisor.");
+      return false;
+    }
+
+    if (!formData.supervisor_email || !emailRegex.test(formData.supervisor_email)) {
+      showAlert("Validation Error", "Supervisor email is invalid.");
+      return false;
+    }
+
     return true;
   };
 
@@ -133,7 +178,7 @@ const EditEmployeeScreen = () => {
 
     try {
       const token = await getAccessToken();
-      const res = await fetch(`http://192.168.1.6:8000/api/employee/employees/${id}/`, {
+      const res = await fetch(`${BASE_URL}/api/employee/employees/${id}/`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -197,7 +242,7 @@ const EditEmployeeScreen = () => {
       </View>
       
 
-      <Text style={styles.label}>Account Type</Text>
+      <Text style={styles.label}>Bank Name</Text>
       <View style={styles.pickerWrapper}>
         <Picker style={styles.picker} selectedValue={formData.account_type} onValueChange={(v) => handleChange("account_type", v)}>
             <Picker.Item label="SBI" value="SBI" />
@@ -205,6 +250,11 @@ const EditEmployeeScreen = () => {
         </Picker>
       </View>
       
+      <Text style={styles.label}>Account Name</Text>
+      <TextInput style={styles.input} value={formData.account_name} onChangeText={(v) => handleChange("account_name", v)} />
+      
+      <Text style={styles.label}>IFSC Code</Text>
+      <TextInput style={styles.input} value={formData.ifsc_code} onChangeText={(v) => handleChange("ifsc_code", v)} />
 
       <Text style={styles.label}>PAN No</Text>
       <TextInput style={styles.input} value={formData.pan_no} onChangeText={(v) => handleChange("pan_no", v)} />
@@ -248,6 +298,37 @@ const EditEmployeeScreen = () => {
 
       <Text style={styles.label}>Designation</Text>
       <TextInput style={styles.input} value={formData.designation} onChangeText={(v) => handleChange("designation", v)} />
+
+      <Text style={styles.label}>Assigned Supervisor</Text>
+      <View style={styles.pickerWrapper}>
+        <Picker
+          selectedValue={formData.supervisor}
+          onValueChange={(value) => {
+            const selectedEmp = employees.find((emp) => emp.id === value.split("-")[0]);
+            handleChange("supervisor", value);
+            handleChange("supervisor_email", selectedEmp?.email || "");
+          }}
+          style={styles.picker}
+        >
+          <Picker.Item label="---Select Supervisor---" value="" enabled={false} />
+          {employees
+            .sort((a, b) => a.id.localeCompare(b.id)) 
+            .map((emp) => (
+              <Picker.Item
+                key={emp.id}
+                label={`${emp.name} (${emp.id})`}
+                value={`${emp.id}-${emp.name}`}
+              />
+            ))}
+        </Picker>
+      </View>
+
+      <Text style={styles.label}>Supervisor Email</Text>
+      <TextInput
+        style={[styles.input, { backgroundColor: "#f0f0f0" }]}
+        value={formData.supervisor_email}
+        editable={false}
+      />
 
       <Text style={styles.label}>Date Joined</Text>
       {Platform.OS === "web" ? (

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Sty
 import { getAccessToken } from '../../auth'; 
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { BASE_URL } from "../../../config";
 
 type Payslip = {
   month: string;
@@ -26,7 +27,7 @@ const MyPayslipsScreen = () => {
     setLoading(true);
     try {
       const token = await getAccessToken();
-      const res = await fetch('http://192.168.1.6:8000/api/payroll/my_payslips/', {
+      const res = await fetch(`${BASE_URL}/api/payroll/my_payslips/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -45,7 +46,7 @@ const MyPayslipsScreen = () => {
     try {
       setLoading(true);
       const token = await getAccessToken();
-      const downloadUrl  = `http://192.168.1.6:8000/api/payroll/download_payslip/?employee_id=${employee_id}&month=${month}`;
+      const downloadUrl  = `${BASE_URL}/api/payroll/download_payslip/?employee_id=${employee_id}&month=${month}`;
 
       if (Platform.OS === 'web') {
         // Web-specific download logic

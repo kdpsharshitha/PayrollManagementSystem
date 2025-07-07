@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { getAccessToken } from "../../auth/index";
+import { BASE_URL } from "../../../config";
 
 interface FormData {
   id: string;
@@ -22,6 +23,8 @@ interface FormData {
   password: string;
   gender: "M" | "F" | "O";
   account_type: "SBI" | "NonSBI";
+  account_name: string;
+  ifsc_code: string;
   pan_no: string;
   phone_no: string;
   emergency_phone_no: string;
@@ -29,6 +32,8 @@ interface FormData {
   employment_type: "full_time" | "part_time";
   role: "admin" | "hr" | "employee";
   designation: string;
+  supervisor: string;
+  supervisor_email: string;
   date_joined: Date | null;
   fee_per_month: string;
   pay_structure: "fixed" | "variable";
@@ -41,6 +46,8 @@ const initialFormData: FormData = {
     password: "",
     gender: "M",
     account_type: "SBI",
+    account_name: "",
+    ifsc_code: "",
     pan_no: "",
     phone_no: "",
     emergency_phone_no: "",
@@ -48,6 +55,8 @@ const initialFormData: FormData = {
     employment_type: "full_time",
     role: "employee",
     designation: "",
+    supervisor: "",
+    supervisor_email: "",
     date_joined: null,
     fee_per_month: "",
     pay_structure: "fixed",
@@ -57,6 +66,25 @@ const AddEmployeeScreen = () => {
   
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [employees, setEmployees] = useState<{ id: string; name: string; email: string }[]>([]);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const token = await getAccessToken();
+        const res = await fetch(`${BASE_URL}/api/employee/employees/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        setEmployees(data);
+      } catch (err) {
+        console.error("Failed to fetch employees:", err);
+      }
+    };
+    fetchEmployees();
+  }, []);
 
   const validateForm = () => {
     const {
@@ -71,6 +99,10 @@ const AddEmployeeScreen = () => {
       pan_no,
       designation,
       date_joined,
+      account_name,
+      ifsc_code,
+      supervisor,
+      supervisor_email,
     } = formData;
 
     const showAlert = (title: string, message: string) => {
@@ -139,6 +171,26 @@ const AddEmployeeScreen = () => {
       return false;
     }
 
+    if (!account_name.trim()) {
+      showAlert("Validation Error", "Account name is required.");
+      return false;
+    }
+
+    if (!ifsc_code.trim()) {
+      showAlert("Validation Error", "IFSC Code is required.");
+      return false;
+    }
+
+    if (!supervisor || supervisor.trim() === "") {
+      showAlert("Validation Error", "Please select a supervisor.");
+      return false;
+    }
+
+    if (!supervisor_email || !emailRegex.test(supervisor_email)) {
+      showAlert("Validation Error", "Supervisor email is invalid.");
+      return false;
+    }
+
     return true;
   };
 
@@ -161,7 +213,7 @@ const AddEmployeeScreen = () => {
         showAlert("Authentication Error", "You are not logged in.");
         return;
       }
-      const response = await fetch("http://192.168.1.6:8000/api/employee/employees/", {
+      const response = await fetch(`${BASE_URL}/api/employee/employees/`, {
         method: "POST",
         headers: { "Content-Type": "application/json",'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
@@ -185,7 +237,7 @@ const AddEmployeeScreen = () => {
   };
 
   const handleChange = <K extends keyof FormData>(key: K, value: FormData[K]) => {
-    setFormData({ ...formData, [key]: value });
+    setFormData(prev => ({ ...prev, [key]: value }));
   };
 
   const formatDate = (date: Date | null) => {
@@ -263,7 +315,7 @@ const AddEmployeeScreen = () => {
       </View>
 
       {/* account_type */}
-      <Text style={styles.label}>Account Type</Text>
+      <Text style={styles.label}>Bank Name</Text>
       <View style={styles.pickerWrapper}>
         <Picker
           selectedValue={formData.account_type}
@@ -273,6 +325,26 @@ const AddEmployeeScreen = () => {
           <Picker.Item label="SBI" value="SBI" />
           <Picker.Item label="Non-SBI" value="NonSBI" />
         </Picker>
+      </View>
+
+      {/* account_name */}
+      <View>
+        <Text style={styles.label}>Account Holder Name</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.account_name}
+          onChangeText={(text) => handleChange("account_name", text)}
+        />
+      </View>
+
+      {/* ifsc_code */}
+      <View>
+        <Text style={styles.label}>IFSC Code</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.ifsc_code}
+          onChangeText={(text) => handleChange("ifsc_code", text)}
+        />
       </View>
 
       {/* pan_no */}
@@ -354,6 +426,37 @@ const AddEmployeeScreen = () => {
           onChangeText={(text) => handleChange("designation", text)}
         />
       </View>
+
+      {/* supervisor (dropdown) */}
+      <Text style={styles.label}>Assign Supervisor</Text>
+      <View style={styles.pickerWrapper}>
+        <Picker
+          selectedValue={formData.supervisor}
+          onValueChange={(value) => {
+            console.log("Supervisor selected:", value);
+            const selected = employees.find((emp) => emp.id === value.split("-")[0]);
+            handleChange("supervisor", value);
+            handleChange("supervisor_email", selected?.email || "");
+          }}
+          style={styles.picker}
+        >
+          <Picker.Item label="---Select Supervisor---" value="" enabled={false}/>
+          {employees.sort((a, b) => a.id.localeCompare(b.id)).map((emp) => (
+            <Picker.Item key={emp.id} label={`${emp.name} (${emp.id})`} value={`${emp.id}-${emp.name}`} />
+          ))}
+        </Picker>
+      </View>
+
+      {/* supervisor_email (readonly) */}
+      <View>
+        <Text style={styles.label}>Supervisor Email</Text>
+        <TextInput
+          style={styles.input}
+          value={formData.supervisor_email}
+          editable={false}
+        />
+      </View>
+
 
       {/* date_joined */}
       <Text style={styles.label}>Date Joined</Text>
