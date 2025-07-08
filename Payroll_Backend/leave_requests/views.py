@@ -2,15 +2,37 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.db.models import Sum, Q
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
+from rest_framework import status,generics, permissions
 from .models import LeaveRequest
 from .serializers import LeaveRequestSerializer
 from datetime import date, timedelta
+from attendance.utils import apply_approved_leave
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.decorators import action
+from django.shortcuts import get_object_or_404
+
+
 
 # Define constants (you might already have them in settings or elsewhere)
 PAID_LEAVE_ENTITLEMENT = 9   # Annual paid leave entitlement
 SICK_LEAVE_ENTITLEMENT = 2   # Annual sick leave entitlement
 MONTHLY_PAID_LEAVE_LIMIT = 1 # Only 1 approved paid leave per calendar month
+HALF_PAID_LEAVE_ENTITLEMENT_PER_MONTH = 2
+
+class AllLeaveRequestsView(generics.ListAPIView):
+    """
+    Admin‑only: list all leave requests in the system.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = LeaveRequestSerializer
+    queryset = LeaveRequest.objects.all().select_related("requester")
+
+    def get(self, request, *args, **kwargs):
+        if request.user.role != "admin":
+            return Response({"detail": "Not authorized."},
+                            status=status.HTTP_403_FORBIDDEN)
+        return super().get(request, *args, **kwargs)
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -74,20 +96,21 @@ def create_leave_request(request):
 @permission_classes([IsAuthenticated])
 def list_leave_requests_for_approval(request):
     """
-    HR can view leave requests submitted by employees.
+    HR can view leave requests submitted by employees **who report to them**.
     Admin can view leave requests submitted by HR.
     """
     user = request.user
 
-    if user.role == "hr":
-        # HR sees leave requests submitted by employees.
+    if user.role == "manager":
+        # Only employees whose supervisor_email matches this HR's email
         leave_requests = LeaveRequest.objects.filter(
-            requester__role="employee"
+            requester__role="employee",
+            requester__supervisor_email=user.email
         ).select_related("requester")
     elif user.role == "admin":
         # Admin sees leave requests submitted by HR.
         leave_requests = LeaveRequest.objects.filter(
-            requester__role="hr"
+            requester__role="manager"
         ).select_related("requester")
     else:
         return Response({"error": "Unauthorized access."},
@@ -97,37 +120,54 @@ def list_leave_requests_for_approval(request):
     return Response(serializer.data)
 
 
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def update_leave_request_status(request, request_id):
     """
     Allows HR or Admin to approve or reject a leave request that is in "pending" status.
     Only HR can process requests for employees, and only Admin can process requests for HR.
+    When approved, automatically updates Attendance records over the date range.
     """
     user = request.user
-    new_status = request.data.get("status")  # new_status avoids naming conflict
+    new_status = request.data.get("status")  # expect "approved" or "rejected"
     if new_status not in ["approved", "rejected"]:
-        return Response({"error": "Invalid status update."},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "Invalid status update."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    try:
-        leave_req = LeaveRequest.objects.get(id=request_id, status="pending")
-    except LeaveRequest.DoesNotExist:
-        return Response({"error": "Leave request not found or already processed."},
-                        status=status.HTTP_404_NOT_FOUND)
+    # Fetch only pending requests
+    leave_req = get_object_or_404(
+        LeaveRequest.objects.filter(status="pending"),
+        id=request_id
+    )
 
-    # Check if the user has permission to update this leave request:
-    #   - HR can update requests submitted by employees.
-    #   - Admin can update requests submitted by HR.
-    if (user.role == "hr" and leave_req.requester.role == "employee") or \
-       (user.role == "admin" and leave_req.requester.role == "hr"):
-        leave_req.status = new_status
-        leave_req.save()
-        return Response({"message": f"Leave request {new_status}."},
-                        status=status.HTTP_200_OK)
+    # Authorization: HR handles employees; Admin handles HR
+    can_process = (
+        (user.role == "manager" and leave_req.requester.role == "employee") or
+        (user.role == "admin" and leave_req.requester.role == "manager")
+    )
+    if not can_process:
+        return Response(
+            {"error": "Unauthorized action."},
+            status=status.HTTP_403_FORBIDDEN
+        )
 
-    return Response({"error": "Unauthorized action."},
-                    status=status.HTTP_403_FORBIDDEN)
+    # 1) Update status on the leave request
+    leave_req.status = new_status
+    leave_req.save()
+
+    # 2) If approved, apply to Attendance
+    if new_status == "approved":
+        # This function will loop each date in the range
+        # and upsert Attendance with Paid/Sick/Half/UnPaid logic.
+        apply_approved_leave(leave_req)
+
+    # 3) Return the updated leave_request data
+    serializer = LeaveRequestSerializer(leave_req)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 
 @api_view(["GET"])
@@ -144,7 +184,7 @@ def my_requests(request):
     if user.role == "admin":
         # Admin sees leave requests of HR users.
         leave_requests = LeaveRequest.objects.filter(
-            requester__role="hr"
+            requester__role="manager"
         ).order_by("-created_at")
     else:
         # HR and Employees see their own leave requests.
@@ -161,152 +201,129 @@ def my_requests(request):
 def leave_balance(request):
     """
     Returns (by default, for the current month):
-      - availablePaid, availableSick
+      - availablePaid, availableSick, availableHalfPaid
       - paidLeaveThisMonth: bool
+      - halfPaidCountThisMonth: int
       - lastPaidLeaveEndDate: str or None
       - lastLeaveEndDate: str or None
       - separateSandwichUnpaidDays: int
 
-    If ?month=MM&year=YYYY are passed *and* both can be parsed as integers,
+    If ?month=MM&year=YYYY are passed *and* both parsed as ints,
     use those; otherwise default to today’s month/year.
-
-    **If the requested year is before the current calendar year,
-    both availablePaid and availableSick are forced to 0.**
     """
     user = request.user
 
     q_month = request.query_params.get("month", None)
-    q_year  = request.query_params.get("year", None)
+    q_year = request.query_params.get("year", None)
 
-    # === Determine which (month, year) to use ===
+    # Determine which (month, year) to use
     use_current_date = True
-    override_month = None
-    override_year  = None
-
-    # If neither param is provided, just use today
-    if (q_month is None or q_month == "") and (q_year is None or q_year == ""):
-        use_current_date = True
-
-    # If only one is provided, that's ambiguous: return 400
-    elif (q_month is None or q_month == "") ^ (q_year is None or q_year == ""):
-        return Response(
-            {"error": "Both 'month' and 'year' must be provided together, or neither."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    # If both are non‐empty, try to parse
-    else:
+    if (q_month and q_year):
         try:
-            override_month = int(q_month)
-            override_year  = int(q_year)
-            # If month not in 1..12 or year is out of a sane range, reject too
-            if not (1 <= override_month <= 12 and 1900 <= override_year <= 2100):
+            m = int(q_month)
+            y = int(q_year)
+            if 1 <= m <= 12 and 1900 <= y <= 2100:
+                current_month, current_year = m, y
+                use_current_date = False
+            else:
                 raise ValueError
-            use_current_date = False
         except ValueError:
-            # Instead of returning a 400 immediately, just ignore these invalid params
-            # and fall back to "today".
             use_current_date = True
-
     if use_current_date:
         today = date.today()
-        current_year = today.year
-        current_month = today.month
-    else:
-        current_year = override_year
-        current_month = override_month
+        current_year, current_month = today.year, today.month
 
-    # --- 1) Calculate pro‐rated paid leave entitlement based on join date ---
+    # --- Calculate entitlements ---
+    # 1) Pro-rated paid leave based on join date
     join_date = user.date_joined
     if join_date.year == current_year:
         months_remaining = 13 - join_date.month
         prorated_paid = int((PAID_LEAVE_ENTITLEMENT * months_remaining) / 12)
     else:
         prorated_paid = PAID_LEAVE_ENTITLEMENT
-
-    # --- 2) Sick leave (no pro‐rating) ---
+    # 2) Sick leave (no pro-rating)
     prorated_sick = SICK_LEAVE_ENTITLEMENT
 
-    # --- 3) Count approved paid leaves in the given year ---
+    # --- Count leaves ---
+    # Paid leaves
     paid_leaves = user.leave_requests.filter(
-        leave_type="paid",
+        leave_type="paid",  # stored as 'paid'
         status="approved",
         start_date__year=current_year
     )
-    used_paid = paid_leaves.count()
+    used_paid_year = paid_leaves.count()
 
-    # --- 4) Count approved sick leaves in the given year (sum total_days) ---
+    # Sick leaves
     sick_leaves = user.leave_requests.filter(
         leave_type="sick",
         status="approved",
         start_date__year=current_year
     )
-    used_sick = sick_leaves.aggregate(total=Sum("total_days"))["total"] or 0
+    used_sick_year = sick_leaves.aggregate(total=Sum("total_days"))["total"] or 0
 
-    # === If the requested year is before the current calendar year, force both to 0 ===
-    if not use_current_date and current_year < date.today().year:
+    # Half-Paid leaves (use exact model value 'Half Paid Leave')
+    half_paid_leaves = user.leave_requests.filter(
+        leave_type="Half Paid Leave",
+        status="approved",
+        start_date__year=current_year
+    )
+    half_paid_count_month = half_paid_leaves.filter(
+        start_date__month=current_month
+    ).count()
+    half_paid_count_year = half_paid_leaves.count()
+    available_half_paid = max(HALF_PAID_LEAVE_ENTITLEMENT_PER_MONTH - half_paid_count_month, 0)
+
+    # --- Adjust for past years ---
+    if current_year < date.today().year and not use_current_date:
         available_paid = 0
         available_sick = 0
-        paid_leave_this_month = False
+        paid_this_month = False
     else:
-        available_paid = max(prorated_paid - used_paid, 0)
-        available_sick = max(prorated_sick - used_sick, 0)
-        paid_leave_this_month = paid_leaves.filter(
+        raw_paid = prorated_paid - used_paid_year - (half_paid_count_year * 0.5)
+        available_paid = max(raw_paid, 0)
+        available_sick = max(prorated_sick - used_sick_year, 0)
+        paid_this_month = paid_leaves.filter(
             start_date__month=current_month
         ).exists()
 
-    # --- 5) Last approved paid leave's end date (if any) ---
-    last_paid_leave = paid_leaves.order_by('-end_date').first()
-    last_paid_leave_end_date = (
-        last_paid_leave.end_date.strftime("%Y-%m-%d") if last_paid_leave else None
-    )
-
-    # --- 5b) Last approved leave of ANY type (for “separate sandwich” calc) ---
-    last_any_approved = user.leave_requests.filter(
+    # Last approved paid leave end date
+    last_paid = paid_leaves.order_by('-end_date').first()
+    last_paid_end = last_paid.end_date.strftime("%Y-%m-%d") if last_paid else None
+    # Last approved leave of any type
+    last_any = user.leave_requests.filter(
         status="approved"
     ).order_by('-end_date').first()
-    last_leave_end_date = (
-        last_any_approved.end_date.strftime("%Y-%m-%d") if last_any_approved else None
-    )
+    last_any_end = last_any.end_date.strftime("%Y-%m-%d") if last_any else None
 
-    # --- Helper: check public holiday ---
+    # --- Sandwich policy calc ---
     def is_public_holiday(d: date) -> bool:
-        public_holidays = {(1, 1), (1, 26), (5, 1), (8, 15), (10, 2), (12, 25)}
-        return (d.month, d.day) in public_holidays
+        return (d.month, d.day) in {(1,1),(1,26),(5,1),(8,15),(10,2),(12,25)}
 
-    # --- 6) Evaluate “separate sandwich” unpaid days: ---
-    consecutive_leaves = list(
-        user.leave_requests.filter(status__in=["pending", "approved"]).order_by("start_date")
+    consecutive = list(
+        user.leave_requests.filter(status__in=["pending","approved"]).order_by("start_date")
     )
-    separate_sandwich_unpaid_days = 0
-
-    for i in range(len(consecutive_leaves) - 1):
-        current_leave = consecutive_leaves[i]
-        next_leave = consecutive_leaves[i + 1]
-
-        # Only single‐day leaves
-        if (
-            current_leave.start_date == current_leave.end_date and
-            next_leave.start_date == next_leave.end_date
-        ):
-            day_diff = (next_leave.start_date - current_leave.end_date).days
-            if day_diff > 1:
-                gap_days = day_diff - 1  # exclude both endpoints
-                working_day_found = False
-                for n in range(1, day_diff):
-                    gap_date = current_leave.end_date + timedelta(days=n)
-                    if gap_date.weekday() < 5 and not is_public_holiday(gap_date):
-                        working_day_found = True
-                        break
-                if not working_day_found:
-                    separate_sandwich_unpaid_days += gap_days
+    separate_unpaid = 0
+    for i in range(len(consecutive)-1):
+        cur, nxt = consecutive[i], consecutive[i+1]
+        if cur.start_date == cur.end_date and nxt.start_date == nxt.end_date:
+            diff = (nxt.start_date - cur.end_date).days
+            if diff > 1:
+                gap = diff - 1
+                if all(
+                    ((cur.end_date + timedelta(days=n)).weekday() >= 5 or
+                     is_public_holiday(cur.end_date + timedelta(days=n)))
+                    for n in range(1, diff)
+                ):
+                    separate_unpaid += gap
 
     data = {
         "availablePaid": available_paid,
         "availableSick": available_sick,
-        "paidLeaveThisMonth": paid_leave_this_month,
-        "lastPaidLeaveEndDate": last_paid_leave_end_date,
-        "lastLeaveEndDate": last_leave_end_date,
-        "separateSandwichUnpaidDays": separate_sandwich_unpaid_days,
+        "availableHalfPaid": available_half_paid,
+        "paidLeaveThisMonth": paid_this_month,
+        "halfPaidCountThisMonth": half_paid_count_month,
+        "lastPaidLeaveEndDate": last_paid_end,
+        "lastLeaveEndDate": last_any_end,
+        "separateSandwichUnpaidDays": separate_unpaid,
     }
     return Response(data, status=200)

@@ -13,6 +13,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const isWeb = Platform.OS === 'web';
 
@@ -46,7 +47,7 @@ const Storage = {
 // Base URL config (you can also inject via EAS config / env vars)
 const API_HOST =
   Constants.expoConfig?.extra?.API_URL ||
-  'http://192.168.1.3:8000';
+  'http://192.168.1.4:8000';
 
 const LoginScreen: React.FC = () => {
   const router = useRouter();
@@ -79,15 +80,17 @@ const LoginScreen: React.FC = () => {
       );
 
       console.log('Server Response:', data);
-      const { access, refresh, role } = data;
+      const { access, refresh, role, name, gmail } = data;
 
       await Storage.set('access_token', access);
       await Storage.set('refresh_token', refresh);
+      await AsyncStorage.setItem('currentUser', JSON.stringify({ name, email: gmail }));
+
 
       if (role === 'admin') {
         router.push('/dashboards/admin');
-      } else if (role === 'hr') {
-        router.push('/dashboards/hr');
+      } else if (role === 'manager') {
+        router.push('/dashboards/manager');
       } else if (role === 'employee') {
         router.push('/dashboards/employee');
       } else {

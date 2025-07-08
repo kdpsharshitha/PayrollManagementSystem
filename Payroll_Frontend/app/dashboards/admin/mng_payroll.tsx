@@ -21,7 +21,7 @@ interface Employee {
   name: string;
   date_joined: Date | null;
   pay_structure: "fixed" | "variable";
-  role: "admin" | "hr" | "employee"; 
+  role: "admin" | "manager" | "employee"; 
 }
 
 type EmployeeDropdownItem = {

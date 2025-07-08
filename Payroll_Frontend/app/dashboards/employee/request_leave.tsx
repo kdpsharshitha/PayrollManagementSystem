@@ -7,12 +7,18 @@ import {
   TextInput,
   TouchableOpacity,
   Pressable,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ViewStyle,
+  Dimensions,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
-import { getAccessToken } from "../../auth"; // Adjust path if needed
+import { getAccessToken } from "../../auth";
+import { useRef } from 'react'; // Adjust path if needed
 
 // Helper: format a Date (or date‐string) as "YYYY-MM-DD", or show placeholder if null/empty
 const formatDate = (d: string | Date | null): string => {
@@ -39,8 +45,11 @@ const LeaveRequestForm: React.FC = () => {
   const [endDate, setEndDate] = useState<string>("");     // stores "YYYY-MM-DD"
   const [leaveType, setLeaveType] = useState<string>("unpaid");
   const [description, setDescription] = useState<string>("");
+  const [availableHalfPaid, setAvailableHalfPaid] = useState<number>(0);
+  const [halfPaidCountThisMonth, setHalfPaidCountThisMonth] = useState<number>(0);
 
-  // ─── DatePicker visibility ──────────────────────────────────────────────────
+
+   // ─── DatePicker visibility ──────────────────────────────────────────────────
   const [showStartPicker, setShowStartPicker] = useState<boolean>(false);
   const [showEndPicker, setShowEndPicker] = useState<boolean>(false);
 
@@ -70,6 +79,8 @@ const LeaveRequestForm: React.FC = () => {
 
   // ─── Existing leave requests to detect duplicates ─────────────────────────────
   const [existingRequests, setExistingRequests] = useState<LeaveRequest[]>([]);
+  const [halfDayPeriod, setHalfDayPeriod] = useState<"morning" | "afternoon" | "">("");
+
 
   // ─── 0) Fetch user's existing leave requests on mount ─────────────────────────
   useEffect(() => {
@@ -81,7 +92,7 @@ const LeaveRequestForm: React.FC = () => {
           return;
         }
         const response = await axios.get(
-          "http://192.168.1.6:8000/api/leave-requests/myrequest/",
+          "http://192.168.220.49:8000/api/leave-requests/myrequest/",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (response.data) {
@@ -104,7 +115,7 @@ const LeaveRequestForm: React.FC = () => {
           return;
         }
 
-        let url = "http://192.168.1.6:8000/api/leave-requests/balance/";
+        let url = "http://192.168.220.49:8000/api/leave-requests/balance/";
         if (startDate) {
           const d = new Date(startDate);
           const m = d.getMonth() + 1;
@@ -121,6 +132,8 @@ const LeaveRequestForm: React.FC = () => {
           setAvailableSick(response.data.availableSick);
           setPaidLeaveThisMonth(response.data.paidLeaveThisMonth || false);
           setLastLeaveEndDate(response.data.lastLeaveEndDate || null);
+          setAvailableHalfPaid(response.data.availableHalfPaid);
+          setHalfPaidCountThisMonth(response.data.halfPaidCountThisMonth || 0);
         }
       } catch (error: any) {
         console.error("Error fetching leave balances:", error.response?.data || error.message);
@@ -154,48 +167,79 @@ const LeaveRequestForm: React.FC = () => {
   }, [startDate, endDate]);
 
   // ─── 3) Inline warning: prevent paid + sick adjacency (both directions) ─────
-  useEffect(() => {
-    let warning = "";
+useEffect(() => {
+  let warning = "";
 
-    // Check "Sick after Paid"
-    if (leaveType === "sick" && startDate) {
-      const newStart = new Date(startDate);
-      const violates = existingRequests.some((req) => {
-        if (req.leave_type !== "paid") return false;
-        const prevEnd = new Date(req.end_date);
-        prevEnd.setDate(prevEnd.getDate() + 1);
-        return (
-          prevEnd.getFullYear() === newStart.getFullYear() &&
-          prevEnd.getMonth() === newStart.getMonth() &&
-          prevEnd.getDate() === newStart.getDate()
-        );
-      });
-      if (violates) {
-        warning = "Paid leave cannot be clubbed with sick leave.";
-      }
+  // Utility function to normalize dates by stripping off the time component.
+  const normalizeDate = (dateValue: string | number | Date): Date => {
+    const d = new Date(dateValue);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  };
+
+  // Check "Sick after Paid"
+  if (leaveType === "sick" && startDate) {
+    const newStart = normalizeDate(startDate);
+    const violates = existingRequests.some((req) => {
+      // Only consider approved paid leaves.
+      if (req.leave_type !== "paid" || req.status !== "approved") return false;
+      const prevEnd = normalizeDate(req.end_date);
+      const afterPrevEnd = new Date(prevEnd);
+      afterPrevEnd.setDate(prevEnd.getDate() + 1);
+
+      // Logging for debug purposes
+      console.log("New sick leave start (local normalized):", newStart.toLocaleDateString());
+      console.log(
+        "Existing paid leave end date:",
+        req.end_date,
+        "-> Calculated next day (local normalized):",
+        afterPrevEnd.toLocaleDateString()
+      );
+
+      return (
+        afterPrevEnd.getFullYear() === newStart.getFullYear() &&
+        afterPrevEnd.getMonth() === newStart.getMonth() &&
+        afterPrevEnd.getDate() === newStart.getDate()
+      );
+    });
+
+    if (violates) {
+      console.log("Immediate consecutive paid leave found. Triggering inline warining");
+      warning = "Paid leave cannot be clubbed with sick leave.";
     }
+  }
 
-    // Check "Paid before Sick"
-    if (!warning && leaveType === "paid" && endDate) {
-      const newEnd = new Date(endDate);
-      const violates = existingRequests.some((req) => {
-        if (req.leave_type !== "sick") return false;
-        const nextStart = new Date(req.start_date);
-        const dayAfter = new Date(newEnd);
-        dayAfter.setDate(dayAfter.getDate() + 1);
-        return (
-          dayAfter.getFullYear() === nextStart.getFullYear() &&
-          dayAfter.getMonth() === nextStart.getMonth() &&
-          dayAfter.getDate() === nextStart.getDate()
-        );
-      });
-      if (violates) {
-        warning = "Paid leave cannot be clubbed with sick leave.";
-      }
+  // Check "Paid before Sick"
+  if (!warning && leaveType === "paid" && endDate) {
+    const newEnd = normalizeDate(endDate);
+    const violates = existingRequests.some((req) => {
+      // Only consider approved sick leaves.
+      if (req.leave_type !== "sick" || req.status !== "approved") return false;
+      const nextStart = normalizeDate(req.start_date);
+      const dayAfter = new Date(newEnd);
+      dayAfter.setDate(newEnd.getDate() + 1);
+
+      // Logging for debug purposes
+      console.log("New paid leave day after end date (local normalized):", dayAfter.toLocaleDateString());
+      console.log(
+        "Existing sick leave start date:",
+        req.start_date,
+        "-> Normalized (local):",
+        nextStart.toLocaleDateString()
+      );
+
+      return (
+        dayAfter.getFullYear() === nextStart.getFullYear() &&
+        dayAfter.getMonth() === nextStart.getMonth() &&
+        dayAfter.getDate() === nextStart.getDate()
+      );
+    });
+    if (violates) {
+      warning = "Paid leave cannot be clubbed with sick leave.";
     }
+  }
 
-    setInlineWarning(warning);
-  }, [startDate, endDate, leaveType, existingRequests]);
+  setInlineWarning(warning);
+}, [startDate, endDate, leaveType, existingRequests]);
 
   // ─── 4) Single‐day weekend/holiday check ─────────────────────────────────────
   const isPublicHoliday = (d: Date): boolean => {
@@ -259,105 +303,236 @@ const LeaveRequestForm: React.FC = () => {
     }
   }, [startDate, endDate]);
 
-// ─── 6) Separate-sandwich + Paid↔Sick block ─────────────────────────────────
+// ─── 6) Separate‑sandwich + Paid↔Sick block ─────────────────────────────────
 useEffect(() => {
-  
+  console.log(
+    "useEffect triggered with startDate:",
+    startDate,
+    ", endDate:",
+    endDate,
+    ", leaveType:",
+    leaveType,
+    ", requestedDays:",
+    requestedDays
+  );
+
+  // Reset any disable flags and warnings.
   setDisablePaidByClubbing(false);
   setDisableSickByClubbing(false);
-
-  if (!startDate || !endDate) {
-    setSeparateSandwichConstraint({ active: false, note: "" });
-    return;
-  }
-  const newStart = new Date(startDate);
-
-  // 1) map into typed array and keep only ones strictly before newStart
-  type Prior = { end: Date; type: "paid" | "sick" | "unpaid" };
-  const priors: Prior[] = existingRequests
-    .map(r => ({ end: new Date(r.end_date), type: r.leave_type as any }))
-    .filter(l => l.end < newStart);
-
-  if (priors.length === 0) {
-    setSeparateSandwichConstraint({ active: false, note: "" });
-    setDisablePaidByClubbing(false);
-    setDisableSickByClubbing(false);
-    return;
-  }
-
-  // 2) pull off the most recent
-  priors.sort((a, b) => b.end.getTime() - a.end.getTime());
-  const { end: prevEnd, type: prevType } = priors[0];
-
+  setSeparateSandwichConstraint({ active: false, note: "" });
   
 
-  // 3) compute the exclusive‐gap in days
-  const msPerDay = 1000 * 60 * 60 * 24;
-  const gapDays = Math.floor((newStart.getTime() - prevEnd.getTime()) / msPerDay) - 1;
-  if (gapDays <= 0) {
-    setSeparateSandwichConstraint({ active: false, note: "" });
+  // If either date is missing, exit early.
+  if (!startDate || !endDate) {
+    console.log("Start or end date missing. Exiting effect.");
     return;
   }
 
-  // 4) count how many of those gapDays are non-working
-  let nonWorkingCount = 0;
-  for (let i = 1; i <= gapDays; i++) {
-    const cursor = new Date(prevEnd);
-    cursor.setDate(cursor.getDate() + i);
-    if (
-      cursor.getDay() === 0 ||
-      cursor.getDay() === 6 ||
-      isPublicHoliday(cursor)
-    ) {
-      nonWorkingCount++;
-    }
+  // Helper: Parse a YYYY-MM-DD string into a normalized local Date (time set to 00:00:00)
+  function parseLocalDate(dateStr: string): Date {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const d = new Date(year, month - 1, day);
+    d.setHours(0, 0, 0, 0);
+    return d;
   }
 
-  // 5) if *all* the gapDays are non-working, apply rules
-  if (nonWorkingCount === gapDays) {
-    // a) block paid↔sick
-    if (
-      (prevType === "paid" && leaveType === "sick") ||
-      (prevType === "sick" && leaveType === "paid")
-    ) {
-      setInlineWarning("Paid leave cannot be clubbed with sick leave.");
-      // if prev was sick, disable Paid; if prev was paid, disable Sick
-      setDisablePaidByClubbing(prevType === "sick");
-      setDisableSickByClubbing(prevType === "paid");
-      setSeparateSandwichConstraint({ active: false, note: "" });
-      return;
-    }
+  // Normalize the new start day.
+  const newStartDay = parseLocalDate(startDate);
+  const msPerDay = 1000 * 60 * 60 * 24;
+  console.log("Normalized newStartDay:", newStartDay.toLocaleString());
 
-    // b) otherwise emit the dynamic note
-    let note = "";
-    if (leaveType === "paid") {
-      if (requestedDays === 1) {
-        note = `Due to the Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid. Only 1 day of Paid leave will be applied.`;
-      } else {
-        note = `Due to the Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid. Only 1 day of Paid leave will be applied; the remaining ${requestedDays - 1} day${requestedDays - 1 > 1 ? "s" : ""} will be treated as Unpaid.`;
-      }
-    } else if (leaveType === "sick") {
-      if (requestedDays === 1) {
-        note = `Due to the Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid. Only 1 day of Sick leave will be applied.`;
-      } else if (requestedDays === 2) {
-        note = `Due to the Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid. Only 2 days of Sick leave will be applied.`;
-      } else {
-        note = `Due to the Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid. Only 2 days of Sick leave will be applied; the remaining ${requestedDays - 2} day${requestedDays - 2 > 1 ? "s" : ""} will be treated as Unpaid.`;
-      }
-    } else {
-      // unpaid
-      if (requestedDays === 1) {
-        note = `Due to the Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request, and 1 requested day, will be treated as Unpaid.`;
-      } else {
-        note = `Due to the Sandwich Policy,${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request, and all ${requestedDays} requested day${requestedDays > 1 ? "s" : ""} will also be treated as Unpaid.`;
-      }
+  // ----------------------
+  // PAID-SICK CHECK BLOCK
+  // ----------------------
+  // We'll try to find the most recent opposite-type leave (only approved records are considered)
+  let oppositeEnd: Date | null = null;
+  let oppositeStatus: string | null = null;
+  if (leaveType === "sick") {
+    // For a sick leave request, find the most recent approved paid leave.
+    const validPaid = existingRequests.filter(
+      (r) => r.leave_type === "paid" && r.status === "approved"
+    );
+    const paidDates = validPaid
+      .map((r) => ({ date: parseLocalDate(r.end_date), status: r.status }))
+      .filter((d) => d.date < newStartDay);
+    console.log(
+      "Filtered paid dates:",
+      paidDates.map((d) => d.date.toLocaleString())
+    );
+    if (paidDates.length > 0) {
+      paidDates.sort((a, b) => b.date.getTime() - a.date.getTime());
+      oppositeEnd = paidDates[0].date;
+      oppositeStatus = paidDates[0].status;
+      console.log("Opposite End (from paid leaves):", oppositeEnd.toLocaleString());
     }
-    setSeparateSandwichConstraint({ active: true, note });
+  } else if (leaveType === "paid") {
+    // For a paid leave request, find the most recent approved sick leave.
+    const validSick = existingRequests.filter(
+      (r) => r.leave_type === "sick" && r.status === "approved"
+    );
+    const sickDates = validSick
+      .map((r) => ({ date: parseLocalDate(r.end_date), status: r.status }))
+      .filter((d) => d.date < newStartDay);
+    console.log(
+      "Filtered sick dates:",
+      sickDates.map((d) => d.date.toLocaleString())
+    );
+    if (sickDates.length > 0) {
+      sickDates.sort((a, b) => b.date.getTime() - a.date.getTime());
+      oppositeEnd = sickDates[0].date;
+      oppositeStatus = sickDates[0].status;
+      console.log("Opposite End (from sick leaves):", oppositeEnd.toLocaleString());
+    }
   } else {
-    setSeparateSandwichConstraint({ active: false, note: "" });
+    console.log("Leave type is neither sick nor paid; no opposite check needed.");
   }
+
+  if (oppositeEnd) {
+    // If the opposite leave found is not approved (or has some other rejected status), skip the warning.
+    if (oppositeStatus !== "approved") {
+      console.log("Opposite leave is not approved. Skipping paid-sick warning.");
+    } else {
+      // Compute the gap between oppositeEnd and newStartDay (excluding the oppositeEnd day).
+      const rawOppGap = (newStartDay.getTime() - oppositeEnd.getTime()) / msPerDay - 1;
+      const oppGapDays = Math.floor(rawOppGap);
+      console.log("OppGapDays:", oppGapDays);
+
+      if (oppGapDays > 0) {
+        let unpaidCount = 0;
+        for (let i = 1; i <= oppGapDays; i++) {
+          const cursor = new Date(oppositeEnd);
+          cursor.setDate(cursor.getDate() + i);
+          cursor.setHours(0, 0, 0, 0);
+          // Check if this day is covered by an approved unpaid leave.
+          const covered = existingRequests.some((r) => {
+            if (r.leave_type === "unpaid" && r.status === "approved") {
+              const start = parseLocalDate(r.start_date);
+              const end = parseLocalDate(r.end_date);
+              return start <= cursor && cursor <= end;
+            }
+            return false;
+          });
+          console.log(`Day ${i} (${cursor.toLocaleDateString()}) covered:`, covered);
+          if (covered) {
+            unpaidCount++;
+          }
+        }
+        console.log("Total unpaidCount:", unpaidCount);
+        if (unpaidCount === oppGapDays) {
+          console.log("Triggering warning for paid-sick sandwich conflict.");
+          setInlineWarning(
+            "Paid leave cannot be clubbed with sick leave because all intervening days are approved unpaid."
+          );
+          setDisablePaidByClubbing(leaveType === "paid");
+          setDisableSickByClubbing(leaveType === "sick");
+        }
+      } else {
+        console.log("No gap between opposite leave and new start.");
+      }
+    }
+  } else {
+    console.log("No opposite leave found for type:", leaveType);
+  }
+
+
+// ---------------------------------------------------
+// EXISTING NON‑WORKING SANDWICH LOGIC (for completeness)
+// ---------------------------------------------------
+// Gather all prior leaves ending strictly before newStartDay.
+const priors = existingRequests
+  .map(r => ({
+    end: parseLocalDate(r.end_date),
+    type: r.leave_type,
+    status: r.status // assuming this property
+  }))
+  .filter(p => p.end < newStartDay);
+
+if (priors.length === 0) {
+  return;
+}
+
+// Sort with the most recent prior leave first.
+priors.sort((a, b) => b.end.getTime() - a.end.getTime());
+const { end: prevEnd, type: prevType, status: prevStatus } = priors[0];
+
+// If the previous leave was not approved (e.g. it was rejected), then disable the sandwich note.
+if (prevStatus !== "approved") {
+  console.log("Previous leave not approved. No sandwich note will be shown.");
+  setSeparateSandwichConstraint({ active: false, note: "" });
+  return;
+}
+
+const rawGap = (newStartDay.getTime() - prevEnd.getTime()) / msPerDay - 1;
+const gapDays = Math.floor(rawGap);
+if (gapDays <= 0) {
+  return;
+}
+
+let nonWorkingCount = 0;
+for (let i = 1; i <= gapDays; i++) {
+  const cursor = new Date(prevEnd);
+  cursor.setDate(cursor.getDate() + i);
+  cursor.setHours(0, 0, 0, 0);
+  if (cursor.getDay() === 0 || cursor.getDay() === 6 || isPublicHoliday(cursor)) {
+    nonWorkingCount++;
+  }
+}
+
+// If all days in the gap are non-working days, then apply the sandwich policy.
+if (nonWorkingCount === gapDays) {
+  // If mixing of paid and sick leave is attempted.
+  if (
+    (prevType === "paid" && leaveType === "sick") ||
+    (prevType === "sick" && leaveType === "paid")
+  ) {
+    console.log("Triggering warning for paid-sick clubbing based on non-working days.");
+    setInlineWarning("Paid leave cannot be clubbed with sick leave.");
+    setDisablePaidByClubbing(prevType === "sick");
+    setDisableSickByClubbing(prevType === "paid");
+    return;
+  }
+
+  // Otherwise, set a sandwich policy note depending on the current leave type.
+  let note = "";
+  if (leaveType === "paid") {
+    if (requestedDays === 1) {
+      note = `Due to the Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid. Only 1 day of Paid leave will be applied.`;
+    } else {
+      note = `Due to the Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid. Only 1 day of Paid leave will be applied; the remaining ${requestedDays - 1} day${requestedDays - 1 > 1 ? "s" : ""} will be treated as Unpaid.`;
+    }
+  } else if (leaveType === "sick") {
+    if (requestedDays === 1) {
+      note = `1 day of Sick leave will be applied.`;
+    } else if (requestedDays === 2) {
+      note = `2 days of Sick leave will be applied.`;
+    } else {
+      note = `2 days of Sick leave will be applied; the remaining ${requestedDays - 2} day${requestedDays - 2 > 1 ? "s" : ""} will be treated as Unpaid.`;
+    }
+  } else if (leaveType === "unpaid") {
+    note =
+      requestedDays === 1
+        ? `Due to the Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request, and 1 requested day, will be treated as Unpaid.`
+        : `Due to the Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request, and all ${requestedDays} requested days will also be treated as Unpaid.`;
+  } else if (leaveType === "Half Paid Leave") {
+    if (requestedDays === 1) {
+      note = "1 half‑paid leave will be applied.";
+    } else {
+      const remaining = requestedDays - 1;
+      note = `1 half‑paid leave will be applied; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
+    }
+  } else if (leaveType === "Half UnPaid Leave") {
+    if (requestedDays === 1) {
+      note = "1 half‑unpaid leave will be applied.";
+    } else {
+      const remaining = requestedDays - 1;
+      note = `1 half‑unpaid leave will be applied; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
+    }
+  }
+  setSeparateSandwichConstraint({ active: true, note });
+} else {
+  setSeparateSandwichConstraint({ active: false, note: "" });
+}
 }, [startDate, endDate, existingRequests, leaveType, requestedDays]);
-
-
 
   // ─── 7) Check for duplicate request BEFORE submit ─────────────────────────────
   useEffect(() => {
@@ -416,19 +591,33 @@ useEffect(() => {
         }
       } else if (leaveType === "sick") {
         if (requestedDays === 1) {
-          noteMessage = `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} in this range will be treated as Unpaid. Only 1 day of Sick leave will be applied.`;
+          noteMessage = `1 day of Sick leave will be applied.`;
         } else if (requestedDays === 2) {
-          noteMessage = `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} in this range will be treated as Unpaid. Only 2 days of Sick leave will be applied.`;
+          noteMessage = `2 days of Sick leave will be applied.`;
         } else {
           // subtract the 2 applied sick days and the non-working days
-          const remaining = requestedDays - 2 - nonWorkingCount;
-          noteMessage = `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} in this range will be treated as Unpaid. Only 2 days of Sick leave will be applied; remaining ${remaining} working day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
+          const remaining = requestedDays - 2;
+          noteMessage = `2 days of Sick leave will be applied; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
         }
       } else if (leaveType === "unpaid") {
         if (requestedDays === 1) {
           noteMessage = `1 day will be treated as Unpaid.`;
         } else {
-          noteMessage = `Due to Sandwich Policy, all ${requestedDays} days (including ${nonWorkingCount} non-working) will be treated as Unpaid.`;
+          noteMessage = `Due to Sandwich Policy, all ${requestedDays} days including ${nonWorkingCount} non-working will be treated as Unpaid.`;
+        }
+      }else if (leaveType === "Half Paid Leave") {
+        if (requestedDays === 1) {
+          noteMessage = "1 half‑paid leave will be applied.";
+        } else {
+          const remaining = requestedDays - 1 - nonWorkingCount;
+          noteMessage = `1 half‑paid leave will be applied,${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} in this range will be treated as Paid; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
+        }
+      } else if (leaveType === "Half UnPaid Leave") {
+        if (requestedDays === 1) {
+          noteMessage = "1 half‑unpaid leave will be applied.";
+        } else {
+          const remaining = requestedDays - 1 - nonWorkingCount;
+          noteMessage = `1 half‑unpaid leave will be applied,${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} in this range will be treated as Paid; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
         }
       }
     } else {
@@ -440,7 +629,21 @@ useEffect(() => {
           const remaining = requestedDays - 1;
           noteMessage = `Only 1 day of Paid leave is available this month; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
         }
-      } else if (leaveType === "sick") {
+      }else if (leaveType === "Half Paid Leave") {
+        if (requestedDays === 1) {
+          noteMessage = "1 half‑paid leave will be applied.";
+        } else {
+          const remaining = requestedDays - 1;
+          noteMessage = `1 half‑paid leave will be applied; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
+        }
+      } else if (leaveType === "Half UnPaid Leave") {
+        if (requestedDays === 1) {
+          noteMessage = "1 half‑unpaid leave will be applied.";
+        } else {
+          const remaining = requestedDays - 1;
+          noteMessage = `1 half‑unpaid leave will be applied; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
+        }
+      }else if (leaveType === "sick") {
         if (requestedDays === 1) {
           noteMessage = "1 day of Sick leave will be applied.";
         } else if (requestedDays === 2) {
@@ -471,10 +674,13 @@ useEffect(() => {
 
 
   // ─── 9) Disable “Paid Leave” if not eligible ─────────────────────────────────
+  const disableHalfPaidOption = halfPaidCountThisMonth >= 2;
   const disablePaidOption = (() => {
     if (!startDate) return true;
     if (availablePaid <= 0) return true;
-    return paidLeaveThisMonth;
+    if (paidLeaveThisMonth) return true;
+    if (halfPaidCountThisMonth >= 1) return true;
+    return false;
   })();
 
   // ─── 10) Form submission ──────────────────────────────────────────────────────
@@ -500,13 +706,14 @@ useEffect(() => {
       }
 
       await axios.post(
-        "http://192.168.1.6:8000/api/leave-requests/create/",
+        "http://192.168.220.49:8000/api/leave-requests/create/",
         {
           start_date: startDate,
           end_date: endDate,
           leave_type: leaveType,
           description,
-          note: combinedNote, 
+          note: combinedNote,
+          half_day_period: halfDayPeriod,  
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -524,7 +731,7 @@ useEffect(() => {
 
       // Re-fetch balances & requests:
       const refreshedBalance = await getAccessToken().then((t) =>
-        axios.get("http://192.168.1.6:8000/api/leave-requests/balance/", {
+        axios.get("http://192.168.220.49:8000/api/leave-requests/balance/", {
           headers: { Authorization: `Bearer ${t}` },
         })
       );
@@ -536,7 +743,7 @@ useEffect(() => {
       }
 
       const refreshedRequests = await getAccessToken().then((t) =>
-        axios.get("http://192.168.1.6:8000/api/leave-requests/myrequest/", {
+        axios.get("http://192.168.220.49:8000/api/leave-requests/myrequest/", {
           headers: { Authorization: `Bearer ${t}` },
         })
       );
@@ -553,105 +760,244 @@ useEffect(() => {
       console.error("Error response:", errorMsg);
     }
   };
+  const startInputRef = useRef<HTMLInputElement>(null);
+  const endInputRef = useRef<HTMLInputElement>(null);
 
   // ─── JSX ───────────────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
+      <View style={styles.contentWrapper}>
       {/* Leave Balance Summary */}
       <View style={styles.summaryContainer}>
         <Text style={styles.summaryTitle}>Leave Balance Summary</Text>
-        <Text style={styles.summaryText}>
-          Paid Leave Selected Month: {paidLeaveThisMonth ? "Used" : "Not Used"}
+
+<View style={styles.summaryItem}>
+  <Text style={styles.summaryText}>This Month’s Paid Leave</Text>
+  <Text style={styles.summaryValue}>{`${paidLeaveThisMonth ? 1 : 0} of 1 day`}</Text>
+</View>
+
+<View style={styles.summaryItem}>
+  <Text style={styles.summaryText}>Half‑Day Paid Leave This Month</Text>
+  <Text style={styles.summaryValue}>{`${halfPaidCountThisMonth} of 2 days`}</Text>
+</View>
+
+<View style={styles.summaryItem}>
+  <Text style={styles.summaryText}>Paid Leave Balance</Text>
+  <Text style={styles.summaryValue}>{availablePaid}</Text>
+</View>
+
+<View style={styles.summaryItem}>
+  <Text style={styles.summaryText}>Sick Leave Balance</Text>
+  <Text style={styles.summaryValue}>{availableSick}</Text>
+</View>
+</View>
+
+
+      
+     <View style={styles.formContainer}>
+      <Text style={styles.heading}>Leave Request</Text>
+{/* ─── Start Date Picker ──────────────────────────────────────────────────── */}
+<Text style={styles.label}>Start Date</Text>
+<View style={styles.datePickerContainer}>
+  {Platform.OS === 'web' ? (
+    <>
+      <input
+        ref={startInputRef}
+        type="date"
+        value={startDate}
+        onChange={e => setStartDate(e.target.value)}
+        style={{
+          flex: 1,
+          height: 40,
+          padding: '0 10px',
+          borderRadius: 4,
+          border: '1px solid #999',
+          backgroundColor: '#FFF',
+          boxSizing: 'border-box',
+        }}
+      />
+      <button
+        onClick={() => startInputRef.current?.showPicker?.() /* some browsers support showPicker() */}
+        style={{
+          marginLeft: 8,
+          padding: 6,
+          backgroundColor: '#FFF',
+          border: '1px solid #999',
+          borderRadius: 4,
+          cursor: 'pointer',
+        }}
+      >
+        <Ionicons name="calendar-outline" size={24} color="#22186F" />
+      </button>
+    </>
+  ) : (
+    <>
+      <Pressable
+        style={styles.datePicker}
+        onPress={() => setShowStartPicker(true)}
+      >
+        <Text style={{ color: startDate ? '#000' : '#999' }}>
+          {formatDate(startDate)}
         </Text>
-        <Text style={styles.summaryText}>Remaining Paid Leaves: {availablePaid}</Text>
-        <Text style={styles.summaryText}>Remaining Sick Leaves: {availableSick}</Text>
-      </View>
+      </Pressable>
+      <TouchableOpacity
+        onPress={() => setShowStartPicker(true)}
+        style={styles.calendarIcon}
+      >
+        <Ionicons name="calendar-outline" size={24} color="#22186F" />
+      </TouchableOpacity>
+      {showStartPicker && (
+        <DateTimePicker
+          value={startDate ? new Date(startDate) : new Date()}
+          mode="date"
+          display="default"
+          onChange={(e, d) => {
+            setShowStartPicker(false);
+            if (e.type === 'set' && d) {
+              setStartDate(d.toISOString().slice(0, 10));
+            }
+          }}
+        />
+      )}
+    </>
+  )}
+</View>
 
-      <Text style={styles.heading}>Leave Request Form</Text>
-
-      {/* ─── Start Date Picker ──────────────────────────────────────────────────── */}
-      <Text style={styles.label}>Start Date</Text>
-      <View style={styles.datePickerContainer}>
-        <Pressable
-          style={styles.datePicker}
-          onPress={() => setShowStartPicker(true)}
-        >
-          <Text style={{ color: startDate ? "#000" : "#999" }}>
-            {formatDate(startDate)}
-          </Text>
-        </Pressable>
-        <TouchableOpacity
-          onPress={() => setShowStartPicker(true)}
-          style={styles.calendarIcon}
-        >
-          <Ionicons name="calendar-outline" size={28} color="#22186F" />
-        </TouchableOpacity>
-        {showStartPicker && (
-          <DateTimePicker
-            value={startDate ? new Date(startDate) : new Date()}
-            mode="date"
-            display="default"
-            onChange={(event, selectedDate) => {
-              setShowStartPicker(false);
-              if (event.type === "set" && selectedDate) {
-                const iso = selectedDate.toISOString().split("T")[0];
-                setStartDate(iso);
-              }
-            }}
-          />
-        )}
-      </View>
-
-      {/* ─── End Date Picker ────────────────────────────────────────────────────── */}
-      <Text style={styles.label}>End Date</Text>
-      <View style={styles.datePickerContainer}>
-        <Pressable
-          style={styles.datePicker}
-          onPress={() => setShowEndPicker(true)}
-        >
-          <Text style={{ color: endDate ? "#000" : "#999" }}>
-            {formatDate(endDate)}
-          </Text>
-        </Pressable>
-        <TouchableOpacity
-          onPress={() => setShowEndPicker(true)}
-          style={styles.calendarIcon}
-        >
-          <Ionicons name="calendar-outline" size={28} color="#22186F" />
-        </TouchableOpacity>
-        {showEndPicker && (
-          <DateTimePicker
-            value={endDate ? new Date(endDate) : new Date()}
-            mode="date"
-            display="default"
-            onChange={(event, selectedDate) => {
-              setShowEndPicker(false);
-              if (event.type === "set" && selectedDate) {
-                const iso = selectedDate.toISOString().split("T")[0];
-                setEndDate(iso);
-              }
-            }}
-          />
-        )}
-      </View>
+{/* ─── End Date Picker ────────────────────────────────────────────────────── */}
+<Text style={styles.label}>End Date</Text>
+<View style={styles.datePickerContainer}>
+  {Platform.OS === 'web' ? (
+    <>
+      <input
+        ref={endInputRef}
+        type="date"
+        value={endDate}
+        onChange={e => setEndDate(e.target.value)}
+        style={{
+          flex: 1,
+          height: 40,
+          padding: '0 10px',
+          borderRadius: 4,
+          border: '1px solid #999',
+          backgroundColor: '#FFF',
+          boxSizing: 'border-box',
+        }}
+      />
+      <button
+        onClick={() => endInputRef.current?.showPicker?.()}
+        style={{
+          marginLeft: 8,
+          padding: 6,
+          backgroundColor: '#FFF',
+          border: '1px solid #999',
+          borderRadius: 4,
+          cursor: 'pointer',
+        }}
+      >
+        <Ionicons name="calendar-outline" size={24} color="#22186F" />
+      </button>
+    </>
+  ) : (
+    <>
+      <Pressable
+        style={styles.datePicker}
+        onPress={() => setShowEndPicker(true)}
+      >
+        <Text style={{ color: endDate ? '#000' : '#999' }}>
+          {formatDate(endDate)}
+        </Text>
+      </Pressable>
+      <TouchableOpacity
+        onPress={() => setShowEndPicker(true)}
+        style={styles.calendarIcon}
+      >
+        <Ionicons name="calendar-outline" size={24} color="#22186F" />
+      </TouchableOpacity>
+      {showEndPicker && (
+        <DateTimePicker
+          value={endDate ? new Date(endDate) : new Date()}
+          mode="date"
+          display="default"
+          onChange={(e, d) => {
+            setShowEndPicker(false);
+            if (e.type === 'set' && d) {
+              setEndDate(d.toISOString().slice(0, 10));
+            }
+          }}
+        />
+      )}
+    </>
+  )}
+</View>
 
       {/* ─── Leave Type Picker ──────────────────────────────────────────────────── */}
       <Text style={styles.label}>Leave Type</Text>
       <View style={styles.pickerContainer}>
-        <Picker selectedValue={leaveType} onValueChange={setLeaveType}>
+        <Picker selectedValue={leaveType} onValueChange={setLeaveType} style={{height: '100%',}} > 
           <Picker.Item
             label="Paid Leave"
             value="paid"
             enabled={!disablePaidOption && !disablePaidByClubbing}
           />
           <Picker.Item
+            label="Half-Paid Leave"
+            value="Half Paid Leave"
+            enabled={!disableHalfPaidOption && !disablePaidOption}
+          />
+          <Picker.Item
             label="Sick Leave"
             value="sick"
-            enabled={availableSick > 0 && !disableSickByClubbing/* && not blocked by other constraints */}
+            enabled={!disableHalfPaidOption && !disableSickByClubbing}
           />
           <Picker.Item label="Unpaid Leave" value="unpaid" enabled={true} />
+          <Picker.Item label="Half-Unpaid Leave" value="Half UnPaid Leave" enabled={true} />
         </Picker>
       </View>
+
+{/* ← Insert your half‑day selector here */}
+{["Half Paid Leave", "Half UnPaid Leave"].includes(leaveType) && (
+  <View style={styles.halfDayContainer}>
+    <Text style={styles.label}>Select Half‑Day Period</Text>
+    <View style={styles.buttonRow}>
+      <TouchableOpacity
+        style={[
+          styles.halfDayButton,
+          halfDayPeriod === "morning" && styles.halfDayButtonSelected,
+        ]}
+        onPress={() => setHalfDayPeriod("morning")}
+      >
+        <Text
+          style={
+            halfDayPeriod === "morning"
+              ? styles.halfDayButtonSelectedText
+              : styles.halfDayButtonText
+          }
+        >
+          Morning
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.halfDayButton,
+          halfDayPeriod === "afternoon" && styles.halfDayButtonSelected,
+        ]}
+        onPress={() => setHalfDayPeriod("afternoon")}
+      >
+        <Text
+          style={
+            halfDayPeriod === "afternoon"
+              ? styles.halfDayButtonSelectedText
+              : styles.halfDayButtonText
+          }
+        >
+          Afternoon
+        </Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+)}
+
       {/* Show only one of inline or duplicate warning, prioritize inline */}
       {(inlineWarning !== "" || duplicateWarning !== "") ? (
         <Text style={styles.warning}>
@@ -698,120 +1044,205 @@ useEffect(() => {
           duplicateWarning !== "" ||
           inlineWarning !== "" ||
           disablePaidByClubbing ||
-          disableSickByClubbing
+          disableSickByClubbing ||
+          (["Half Paid Leave","Half UnPaid Leave"].includes(leaveType) && !halfDayPeriod)
         }
       >
         <Text style={styles.buttonText}>Submit Request</Text>
       </TouchableOpacity>
-
+      </View>
+     </View>
     </View>
   );
 };
 
+const windowHeight = Dimensions.get('window').height;
+const FORM_MAX_HEIGHT = Math.round(windowHeight * 0.8);
+
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: "#F7F7F7",
     flex: 1,
+    padding: 16,
+    height: Platform.OS === 'web' ? windowHeight : undefined,
+    backgroundColor: '#f2f4f7',        // light neutral background
   },
+
+  // NEW: wrapper that on web lays out children side by side
+  contentWrapper: {
+  flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+  flexWrap: Platform.OS === 'web' ? 'nowrap' : 'wrap',
+  width: '100%',
+  justifyContent: 'space-between',
+  alignItems: Platform.OS === 'web' ? 'flex-start' : 'stretch',
+},
+
+
+  // Summary “card”
   summaryContainer: {
-    backgroundColor: "#E8F0FE",
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#B3C7F9",
-  },
+  width: Platform.OS === 'web' ? '40%' : '100%',
+  marginRight: Platform.OS === 'web' ? 16 : 0,
+  backgroundColor: '#fff',
+  padding: 20,
+  borderRadius: 12,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+  // force shrink below content size
+  flexShrink: 1,
+  minWidth: 0,
+},
+
   summaryTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 6,
-    color: "#1A3A78",
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#22186F',
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
   summaryText: {
-    fontSize: 16,
-    color: "#333",
-    marginVertical: 2,
+    fontSize: 14,
+    color: '#333',
   },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#22186F',
+  },
+
+  // Form “card”
+  formContainer: {
+  width: Platform.OS === 'web' ? '55%' : '100%',
+  maxHeight: Platform.OS === 'web' ? FORM_MAX_HEIGHT : undefined,
+  backgroundColor: '#fff',
+  padding: 20,
+  borderRadius: 12,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+  flexShrink: 1,
+  minWidth: 0,
+
+  // web-only vertical scrolling
+  ...(Platform.OS === 'web'
+    ? { overflowY: 'auto', WebkitOverflowScrolling: 'touch' }
+    : {}),
+},
+
   heading: {
-    fontSize: 22,
-    marginBottom: 15,
-    fontWeight: "bold",
-    color: "#22186F",
-    textAlign: "center",
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 16,
+    color: '#22186F',
   },
   label: {
-    marginBottom: 6,
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#444",
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 12,
+    color: '#555',
   },
   datePickerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
   },
   datePicker: {
     flex: 1,
     height: 40,
-    borderColor: "#999",
-    borderWidth: 1,
-    borderRadius: 4,
+    justifyContent: 'center',
     paddingHorizontal: 10,
-    justifyContent: "center",
-    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: '#999',
+    borderRadius: 4,
+    backgroundColor: '#FFF',
   },
   calendarIcon: {
     marginLeft: 8,
-    padding: 6,
-    backgroundColor: "#FFF",
-    borderColor: "#999",
-    borderWidth: 1,
-    borderRadius: 4,
   },
   pickerContainer: {
-    borderColor: "#999",
+    height: 48,              // makes your dropdown taller
+    justifyContent: 'center',// vertically center the selected value
     borderWidth: 1,
+    borderColor: '#999',
     borderRadius: 4,
-    marginBottom: 14,
-    overflow: "hidden",
-    backgroundColor: "#FFF",
+    marginTop: 4,
+
+    // only needed to clip the <select> on web; has no effect on native
+    ...Platform.select({
+      web: {
+        overflow: 'hidden',
+      },
+    }),
   },
   input: {
-    height: 40,
-    borderColor: "#999",
     borderWidth: 1,
-    marginBottom: 14,
-    paddingHorizontal: 10,
+    borderColor: '#999',
     borderRadius: 4,
-    backgroundColor: "#FFF",
-  },
-  warning: {
-    color: "red",
-    fontSize: 14,
-    marginBottom: 14,
-    fontWeight: "bold",
-  },
-  note: {
-    color: "#555",
-    fontSize: 14,
-    marginBottom: 14,
-    fontStyle: "italic",
+    padding: 10,
+    marginTop: 12,
+    backgroundColor: '#FFF',
   },
   button: {
-    backgroundColor: "#2563EB",
+    marginTop: 20,
     paddingVertical: 12,
-    borderRadius: 4,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "bold",
+    borderRadius: 6,
+    backgroundColor: '#22186F',
+    alignItems: 'center',
   },
   buttonDisabled: {
-    backgroundColor: "#A0AEC0", // lighter/gray to indicate disabled
+    backgroundColor: '#999',
+  },
+  buttonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  warning: {
+    color: '#D9534F',
+    marginTop: 8,
+  },
+  note: {
+    color: '#5A5A5A',
+    fontSize: 12,
+    marginTop: 8,
+  },
+   halfDayContainer: {
+    marginVertical: 12,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+  },
+  halfDayButton: {
+    flex: 1,
+    marginHorizontal: 4,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+  },
+  halfDayButtonSelected: {
+    borderColor: "#22186F",
+    backgroundColor: "#22186F",
+  },
+  halfDayButtonText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  halfDayButtonSelectedText: {
+    fontSize: 14,
+    color: "#fff",
+    fontWeight: "600",
   },
 });
 

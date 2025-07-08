@@ -30,7 +30,7 @@ interface FormData {
   emergency_phone_no: string;
   address: string;
   employment_type: "full_time" | "part_time";
-  role: "admin" | "hr" | "employee";
+  role: "admin" | "manager" | "employee";
   designation: string;
   supervisor: string;
   supervisor_email: string;
@@ -412,7 +412,7 @@ const AddEmployeeScreen = () => {
           style={styles.picker}
         >
           <Picker.Item label="Admin" value="admin" />
-          <Picker.Item label="HR" value="hr" />
+          <Picker.Item label="Manager" value="manager" />
           <Picker.Item label="Employee" value="employee" />
         </Picker>
       </View>

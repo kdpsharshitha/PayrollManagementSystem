@@ -55,3 +55,14 @@ def get_logged_in_employee(request):
     data = EmployeeSerializer(user).data
     data["is_superuser"] = user.is_superuser
     return Response(data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def view_profile(request):
+    """
+    Return the profile details for the currently authenticated user.
+    """
+    # `request.user` is your Employee instance (because you use it as the User model).
+    serializer = EmployeeSerializer(request.user)
+    return Response(serializer.data)

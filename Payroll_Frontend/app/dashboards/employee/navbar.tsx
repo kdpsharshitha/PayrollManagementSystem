@@ -37,8 +37,11 @@ export default function Navbar() {
       {/* Web Sidebar */}
       {isWeb && menuVisible && (
         <View style={[styles.sidebar, { height: windowHeight - 75 }]}>
-          <Pressable onPress={() => handleNavigate("/dashboards/employee/my_attendance")}>
+          <Pressable onPress={() => handleNavigate("/dashboards/employee/attendance-details")}>
             <Text style={styles.sidebarItem}>My Attendance</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/employee/mark_attendance")}>
+            <Text style={styles.sidebarItem}>Manage Attendance</Text>
           </Pressable>
           <Pressable onPress={() => setLeavesDropdownVisible(!leavesDropdownVisible)}>
             <Text style={styles.sidebarItem}>My Leaves ▾</Text>
@@ -61,8 +64,11 @@ export default function Navbar() {
 
       {!isWeb && menuVisible && (
         <View style={styles.menu}>
-          <Pressable onPress={() => handleNavigate("/dashboards/employee/my_attendance")}>
+          <Pressable onPress={() => handleNavigate("/dashboards/employee/attendance-details")}>
             <Text style={styles.menuItem}>My Attendance</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/employee/mark_attendance")}>
+            <Text style={styles.menuItem}>Manage Attendance</Text>
           </Pressable>
           <Pressable onPress={() => setLeavesDropdownVisible(!leavesDropdownVisible)}>
             <Text style={styles.menuItem}>My Leaves ▾</Text>
@@ -85,12 +91,12 @@ export default function Navbar() {
 
       {profileMenuVisible && (
         <View style={styles.profileMenu}>
-          <Pressable onPress={() => handleNavigate("../../profile/view_profile")}>
+          <Pressable onPress={() => handleNavigate("/dashboards/employee/view_profile")}>
             <Text style={styles.menuItem}>View Profile</Text>
           </Pressable>
-          <Pressable onPress={() => handleNavigate("../../profile/chng_password")}>
+          {/* <Pressable onPress={() => handleNavigate("../../profile/chng_password")}>
             <Text style={styles.menuItem}>Change Password</Text>
-          </Pressable>
+          </Pressable> */}
           <Pressable onPress={() => handleNavigate("../../(tabs)")}>
             <Text style={[styles.menuItem, { color: "red" }]}>Logout</Text>
           </Pressable>

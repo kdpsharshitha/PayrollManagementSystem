@@ -1,5 +1,3 @@
-// app/leave-requests/employeeLeaveStatus.tsx
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -17,9 +15,10 @@ interface LeaveRequest {
   id: number;
   start_date: string;   // "YYYY-MM-DD"
   end_date: string;     // "YYYY-MM-DD"
-  leave_type: "paid" | "sick" | "unpaid";
+  leave_type: string;
   status: "pending" | "approved" | "rejected";
   created_at: string;   // ISO string
+  half_day_period?: "morning" | "afternoon";
 }
 
 // Helper: check if a Date is a public holiday
@@ -77,7 +76,21 @@ const computeNoteForRequest = (
       const nonWorkingCount = sandwichDays;
       const workingDays = daysCount - nonWorkingCount;
 
-      if (leave_type === "paid") {
+      if (leave_type === "Half Paid Leave") {
+        if (daysCount === 1) {
+          return "1 half‑paid leave will be applied.";
+        } else {
+          const remaining = daysCount - 1;
+          return `1 half‑paid leave will be applied; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
+        }
+      } else if (leave_type === "Half UnPaid Leave") {
+        if (daysCount === 1) {
+          return "1 half‑unpaid leave will be applied.";
+        } else {
+          const remaining = daysCount - 1;
+          return `1 half‑unpaid leave will be applied; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
+        }
+      } else if (leave_type === "paid") {
         if (daysCount === 1) {
           return "Due to Sandwich Policy, 1 day of Paid leave will be applied.";
         } else {
@@ -91,8 +104,7 @@ const computeNoteForRequest = (
         } else {
           return `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} in your range will be treated as Unpaid; only 2 days of Sick leave will be applied, remaining ${workingDays - 2} working day${workingDays - 2 > 1 ? "s" : ""} will be treated as Unpaid.`;
         }
-      } else {
-        // unpaid
+      } else if (leave_type === "unpaid") {
         return daysCount === 1
           ? "1 day will be treated as Unpaid."
           : `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} in your range will be treated as Unpaid; all ${daysCount} requested day${daysCount > 1 ? "s" : ""} will be treated as Unpaid.`;
@@ -132,21 +144,12 @@ const computeNoteForRequest = (
         }
 
         if (nonWorkingCount === gapDays) {
-          const workingRemaining = daysCount - 1; // always single-day request here
           if (leave_type === "paid") {
-            return daysCount === 1
-              ? `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid; only 1 day of Paid leave will be applied.`
-              : `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leaves will be treated as Unpaid; only 1 day of Paid leave will be applied, remaining ${workingRemaining} working day${workingRemaining > 1 ? "s" : ""} will be treated as Unpaid.`;
+            return `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid; only 1 day of Paid leave will be applied.`;
           } else if (leave_type === "sick") {
-            return daysCount === 1
-              ? `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid; only 1 day of Sick leave will be applied.`
-              : daysCount === 2
-              ? `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid; only 2 days of Sick leave will be applied.`
-              : `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid; only 2 days of Sick leave will be applied, remaining ${daysCount - 2} day${daysCount - 2 > 1 ? "s" : ""} will be treated as Unpaid.`;
-          } else {
-            return daysCount === 1
-              ? `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid; 1 requested day will be treated as Unpaid.`
-              : `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid; all ${daysCount} requested day${daysCount > 1 ? "s" : ""} will be treated as Unpaid.`;
+            return `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid; only 1 day of Sick leave will be applied.`;
+          } else if (leave_type === "unpaid") {
+            return `Due to Sandwich Policy, ${nonWorkingCount} non-working day${nonWorkingCount > 1 ? "s" : ""} between your previous leave and this request will be treated as Unpaid; 1 requested day will be treated as Unpaid.`;
           }
         }
       }
@@ -154,7 +157,21 @@ const computeNoteForRequest = (
   }
 
   // 4) Default notes if no sandwich applies
-  if (leave_type === "paid") {
+  if (leave_type === "Half Paid Leave") {
+    if (daysCount === 1) {
+      return "1 half‑paid leave will be applied.";
+    } else {
+      const remaining = daysCount - 1;
+      return `1 half‑paid leave will be applied; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
+    }
+  } else if (leave_type === "Half UnPaid Leave") {
+    if (daysCount === 1) {
+      return "1 half‑unpaid leave will be applied.";
+    } else {
+      const remaining = daysCount - 1;
+      return `1 half‑unpaid leave will be applied; remaining ${remaining} day${remaining > 1 ? "s" : ""} will be treated as Unpaid.`;
+    }
+  } else if (leave_type === "paid") {
     const allowedDays = 1;
     const remainingDays = daysCount - allowedDays;
 
@@ -171,14 +188,13 @@ const computeNoteForRequest = (
       ? "2 days of Sick leave will be applied."
       : `2 days of Sick leave will be applied; remaining ${remainingDays} day${remainingDays > 1 ? "s" : ""} will be treated as Unpaid.`;
   } else {
-    const remainingDays = daysCount;
-
     return daysCount === 1
       ? "1 day will be treated as Unpaid."
-      : `All ${remainingDays} days will be treated as Unpaid.`;
+      : `All ${daysCount} days will be treated as Unpaid.`;
   }
-
 };
+
+// ... rest of EmployeeLeaveStatus component unchanged
 
 
 const EmployeeLeaveStatus: React.FC = () => {
@@ -203,7 +219,7 @@ const EmployeeLeaveStatus: React.FC = () => {
         return [];
       }
       const response = await axios.get(
-        "http://192.168.1.6:8000/api/leave-requests/myrequest/",
+        "http://192.168.220.49:8000/api/leave-requests/myrequest/",
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data: LeaveRequest[] = response.data;
@@ -241,6 +257,17 @@ const EmployeeLeaveStatus: React.FC = () => {
 
   const renderLeaveRequest = ({ item }: { item: LeaveRequest }) => {
     const noteText = computeNoteForRequest(item, leaveRequests);
+    let typeLabel = item.leave_type;
+  if (
+    (item.leave_type === "Half Paid Leave" ||
+     item.leave_type === "Half UnPaid Leave") &&
+    item.half_day_period
+  ) {
+    // capitalize first letter
+    const cap = item.half_day_period[0].toUpperCase() + item.half_day_period.slice(1);
+    typeLabel += ` [${cap}]`;
+  }
+
     return (
       <View style={styles.itemContainer}>
         <Text style={styles.itemText}>
@@ -250,7 +277,7 @@ const EmployeeLeaveStatus: React.FC = () => {
           <Text style={styles.label}>Dates:</Text> {item.start_date} – {item.end_date}
         </Text>
         <Text style={styles.itemText}>
-          <Text style={styles.label}>Type:</Text> {item.leave_type.toUpperCase()}
+          <Text style={styles.label}>Type:</Text> {typeLabel.toUpperCase()}
         </Text>
         <Text style={[styles.itemText, { color: getStatusColor(item.status) }]}>
           <Text style={styles.label}>Status:</Text> {item.status.toUpperCase()}

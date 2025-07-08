@@ -22,6 +22,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
             "created_at",
             "status",
             "note",
+            "half_day_period",
         ]
         read_only_fields = [
             "id",

@@ -36,7 +36,7 @@ class Employee(AbstractBaseUser, PermissionsMixin):
     # Define your choices
     GENDER_CHOICES = [("M", "Male"), ("F", "Female"), ("O", "Other")]
     EMPLOYMENT_TYPE_CHOICES = [("full_time", "Full Time"), ("part_time", "Part Time")]
-    ROLE_CHOICES = [("admin", "Admin"), ("hr", "HR"), ("employee", "Employee")]
+    ROLE_CHOICES = [("admin", "Admin"), ("manager", "Manager"), ("employee", "Employee")]
     PAY_STRUCTURE_CHOICES = [('fixed', 'Fixed Pay'), ('variable', 'Variable Pay')]
     ACCOUNT_TYPE_CHOICES = [('SBI', 'SBI'), ('NonSBI', 'Non-SBI')]
 

@@ -31,7 +31,7 @@ interface FormData {
   emergency_phone_no: string;
   address: string;
   employment_type: "full_time" | "part_time";
-  role: "admin" | "hr" | "employee";
+  role: "admin" | "manager" | "employee";
   designation: string;
   date_joined: Date | null;
   fee_per_month: string;
@@ -290,7 +290,7 @@ const EditEmployeeScreen = () => {
       <View style={styles.pickerWrapper}>
         <Picker style={styles.picker} selectedValue={formData.role} onValueChange={(v) => handleChange("role", v)}>
             <Picker.Item label="Admin" value="admin" />
-            <Picker.Item label="HR" value="hr" />
+            <Picker.Item label="Manager" value="manager" />
             <Picker.Item label="Employee" value="employee" />
         </Picker>
       </View>

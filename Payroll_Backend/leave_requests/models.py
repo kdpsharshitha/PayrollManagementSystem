@@ -14,10 +14,18 @@ class LeaveRequest(models.Model):
     
     # Leave type options.
     LEAVE_TYPE_CHOICES = [
+        ('Half Paid Leave', 'Half Paid Leave'),
+        ('UnPaid Leave', 'UnPaid Leave'),
+        ('Half UnPaid Leave', 'Half UnPaid Leave'),
         ('paid', 'Paid Leave'),
         ('sick', 'Sick Leave'),
         ('unpaid', 'Unpaid Leave'),
     ]
+
+    HALF_DAY_CHOICES = [
+    ("morning", "Morning"),
+    ("afternoon", "Afternoon"),
+    ] 
     
     # The user that submits the leave request.
     requester = models.ForeignKey(
@@ -31,6 +39,13 @@ class LeaveRequest(models.Model):
 
     # New: field to store any warning/note generated during validation
     note = models.TextField(blank=True, null=True)
+    half_day_period = models.CharField(
+        max_length=9,
+        choices=HALF_DAY_CHOICES,
+        blank=True,
+        null=True,
+        help_text="If half‑day leave, did they take morning or afternoon?"
+    )
     
     start_date = models.DateField()
     end_date   = models.DateField()
@@ -38,7 +53,7 @@ class LeaveRequest(models.Model):
     # Total number of leave days requested.
     total_days = models.IntegerField(blank=True, null=True)
     
-    leave_type  = models.CharField(max_length=10, choices=LEAVE_TYPE_CHOICES, default='paid')
+    leave_type  = models.CharField(max_length=20, choices=LEAVE_TYPE_CHOICES, default='paid')
     description = models.TextField(blank=True, null=True)
     
     status     = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")

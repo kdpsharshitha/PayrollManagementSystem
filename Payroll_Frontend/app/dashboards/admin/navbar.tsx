@@ -41,16 +41,28 @@ export default function Navbar() {
           <Pressable onPress={() => handleNavigate("/dashboards/admin/view_mng_emp_details")}>
             <Text style={styles.sidebarItem}>View & Manage Employee Details</Text>
           </Pressable>
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/hr_leave_requests")}>
-            <Text style={styles.sidebarItem}>Manage HR Leave Requests</Text>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/AllRequestsScreen")}>
+            <Text style={styles.sidebarItem}>All Leave Requests</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/AttendanceList")}>
+            <Text style={styles.sidebarItem}>Attendance List</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/mngr_leave_requests")}>
+            <Text style={styles.sidebarItem}>Manager Leave Requests</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/attendance-detail")}>
+            <Text style={styles.sidebarItem}>Manage My attendance</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/my-attendance")}>
+            <Text style={styles.sidebarItem}>My Attendance</Text>
           </Pressable>
           {/* <Pressable onPress={() => handleNavigate("/dashboards/admin/mng_payroll")}>
             <Text style={styles.sidebarItem}>Manage Payroll</Text>
           </Pressable> */}
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/new_mng_payroll")}>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/gen_payroll")}>
             <Text style={styles.sidebarItem}>Generate Payroll & Email</Text>
           </Pressable>
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/view_payroll")}>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/review_edit_payroll")}>
             <Text style={styles.sidebarItem}>Review & Edit Payroll</Text>
           </Pressable>
           <Pressable onPress={() => handleNavigate("/dashboards/admin/my_payslips")}>
@@ -68,16 +80,28 @@ export default function Navbar() {
           <Pressable onPress={() => handleNavigate("/dashboards/admin/view_mng_emp_details")}>
             <Text style={styles.menuItem}>View & Manage Employee Details</Text>
           </Pressable>
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/hr_leave_requests")}>
-            <Text style={styles.menuItem}>Manage HR Leave Requests</Text>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/AllRequestsScreen")}>
+            <Text style={styles.menuItem}>All Leave Requests</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/AttendanceList")}>
+            <Text style={styles.menuItem}>Attendance List</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/mngr_leave_requests")}>
+            <Text style={styles.menuItem}>Manager Leave Requests</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/attendance-detail")}>
+            <Text style={styles.menuItem}>Manage My attendance</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/my-attendance")}>
+            <Text style={styles.menuItem}>My Attendance</Text>
           </Pressable>
           {/* <Pressable onPress={() => handleNavigate("/dashboards/admin/mng_payroll")}>
             <Text style={styles.menuItem}>Manage Payroll</Text>
           </Pressable> */}
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/new_mng_payroll")}>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/gen_payroll")}>
             <Text style={styles.menuItem}>Generate Payroll & Email</Text>
           </Pressable>
-          <Pressable onPress={() => handleNavigate("/dashboards/admin/view_payroll")}>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/review_edit_payroll")}>
             <Text style={styles.menuItem}>Review & Edit Payroll</Text>
           </Pressable>
           <Pressable onPress={() => handleNavigate("/dashboards/admin/my_payslips")}>
@@ -88,12 +112,12 @@ export default function Navbar() {
 
       {profileMenuVisible && (
         <View style={styles.profileMenu}>
-          <Pressable onPress={() => handleNavigate("../../profile/view_profile")}>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/view_profile")}>
             <Text style={styles.menuItem}>View Profile</Text>
           </Pressable>
-          <Pressable onPress={() => handleNavigate("../../profile/chng_password")}>
+          {/* <Pressable onPress={() => handleNavigate("../../profile/chng_password")}>
             <Text style={styles.menuItem}>Change Password</Text>
-          </Pressable>
+          </Pressable> */}
           <Pressable onPress={() => handleNavigate("../../(tabs)")}>
             <Text style={[styles.menuItem, { color: "red" }]}>Logout</Text>
           </Pressable>
