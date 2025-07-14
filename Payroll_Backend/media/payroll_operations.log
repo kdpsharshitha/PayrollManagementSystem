@@ -1,28 +1,20 @@
-INFO 2025-07-07 18:49:25,214 views 14652 21496 Received request to generate/update payroll.
-INFO 2025-07-07 18:49:25,243 views 14652 21496 Payroll UPDATED for employee: 100101 - Harshitha for month: 2025-04 by 100101. Reimbursement proof changed from 'payslip_100101_2025-04_1.pdf' to 'payslip_100101_2025-04.pdf'.
-INFO 2025-07-07 18:49:25,247 views 14652 21496 Payroll computation triggered and saved for employee 100101 for month 2025-04.
+INFO 2025-07-09 14:24:26,122 views Received request to generate/update payroll.
+INFO 2025-07-09 14:24:26,244 views Payroll UPDATED for employee: 100102 - Karthik for month: 2025-04 by 100101. Reimbursement proof changed from 'Btp.pdf' to 'payslip_100101_2025-04 (2).pdf'.
+INFO 2025-07-09 14:24:26,257 views Payroll computation triggered and saved for employee 100102 for month 2025-04.
 
-INFO 2025-07-07 19:44:49,087 views 24456 22504 Received request to generate/update payroll.
-INFO 2025-07-07 19:44:49,194 views 24456 22504 Payroll UPDATED for employee: 100102 - Karthik for month: 2025-04 by 100101. Reimbursement changed from '0.00' to '100.00'. Reimbursement proof 'Btp.pdf' added.
-INFO 2025-07-07 19:44:49,247 views 24456 22504 Payroll computation triggered and saved for employee 100102 for month 2025-04.
+INFO 2025-07-09 14:25:36,992 views Received request to generate/update payroll.
+INFO 2025-07-09 14:25:37,058 views Payroll UPDATED for employee: 100102 - Karthik for month: 2025-04 by 100101. Reimbursement proof changed from 'payslip_100101_2025-04_2.pdf' to 'Btp.pdf'.
+INFO 2025-07-09 14:25:37,091 views Payroll computation triggered and saved for employee 100102 for month 2025-04.
 
-INFO 2025-07-07 19:47:30,552 views 24456 20156 Received request to generate/update payroll.
-INFO 2025-07-07 19:47:30,766 views 24456 20156 Payroll UPDATED for employee: 100101 - Harshitha for month: 2025-04 by 100101. Reimbursement proof changed from 'payslip_100101_2025-04.pdf' to 'task%201.pdf'.
-INFO 2025-07-07 19:47:30,770 views 24456 20156 Payroll computation triggered and saved for employee 100101 for month 2025-04.
+INFO 2025-07-09 14:26:28,418 views Received request to generate/update payroll.
+INFO 2025-07-09 14:26:28,506 views Payroll UPDATED for employee: 100101 - Harshitha for month: 2025-04 by 100101. Reimbursement proof changed from 'payslip_100101_2025-04.pdf' to '1-4.pdf'.
+INFO 2025-07-09 14:26:28,514 views Payroll computation triggered and saved for employee 100101 for month 2025-04.
 
-INFO 2025-07-07 19:49:14,291 views 24456 20156 Received request to generate/update payroll.
-INFO 2025-07-07 19:49:14,318 views 24456 20156 Payroll UPDATED for employee: 100104 - Praghna for month: 2025-04 by 100101. Reimbursement changed from '100.00' to '0'. Reimbursement proof '1-4.pdf' removed.
-INFO 2025-07-07 19:49:14,321 views 24456 20156 Payroll computation triggered and saved for employee 100104 for month 2025-04.
+INFO 2025-07-11 15:15:02,694 views Received request to generate/update payroll.
+INFO 2025-07-11 15:15:02,782 views Payroll UPDATED for employee: 100102 - Karthik for month: 2025-04 by 100101. Reimbursement proof changed from 'Btp.pdf' to 'payslip_100101_2025-04 (2).pdf'.
+INFO 2025-07-11 15:15:02,789 views Payroll computation triggered and saved for employee 100102 for month 2025-04.
 
-INFO 2025-07-07 22:39:25,009 views 14544 4020 Received request to generate/update payroll.
-INFO 2025-07-07 22:39:25,145 views 14544 4020 Payroll UPDATED for employee: 100101 - Harshitha for month: 2025-04 by 100102. Reimbursement proof changed from 'task201.pdf' to 'README_GRP4.pdf'.
-INFO 2025-07-07 22:39:25,173 views 14544 4020 Payroll computation triggered and saved for employee 100101 for month 2025-04.
-
-INFO 2025-07-08 19:06:49,432 views 21168 7080 Received request to generate/update payroll.
-INFO 2025-07-08 19:06:49,536 views 21168 7080 Payroll UPDATED for employee: 100101 - Harshitha for month: 2025-04 by 100101. Reimbursement proof changed from 'README_GRP4.pdf' to 'payslip_100101_2025-04.pdf'.
-INFO 2025-07-08 19:06:49,548 views 21168 7080 Payroll computation triggered and saved for employee 100101 for month 2025-04.
-
-INFO 2025-07-08 19:26:43,210 views 22600 13928 Received request to generate/update payroll.
-INFO 2025-07-08 19:26:43,247 views 22600 13928 Payroll UPDATED for employee: 100104 - Praghna for month: 2025-04 by 100101.
-INFO 2025-07-08 19:26:43,252 views 22600 13928 Payroll computation triggered and saved for employee 100104 for month 2025-04.
+INFO 2025-07-14 12:13:51,324 views Received request to generate/update payroll.
+INFO 2025-07-14 12:13:51,390 views Payroll UPDATED for employee: 100101 - Harshitha for month: 2025-04 by 100101.
+INFO 2025-07-14 12:13:51,398 views Payroll computation triggered and saved for employee 100101 for month 2025-04.
 

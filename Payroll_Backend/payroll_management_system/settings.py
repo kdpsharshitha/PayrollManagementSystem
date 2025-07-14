@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'leavedetails',
     'payroll',
     'leave_requests',
+    'backup_restore',
     'corsheaders',
 ]
 
@@ -63,6 +64,12 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True  
+
+CORS_EXPOSE_HEADERS = [
+    'Content-Disposition',
+    # If you ever need to access other non-default headers on the frontend,
+    # you would list them here as well.
+]
 
 ROOT_URLCONF = 'payroll_management_system.urls'
 
@@ -189,7 +196,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'format': '{levelname} {asctime} {module} {message}',
             'style': '{',
         },
         'simple': {
@@ -204,6 +211,12 @@ LOGGING = {
             'filename': os.path.join(MEDIA_ROOT, 'payroll_operations.log'), # Path to your log file
             'formatter': 'verbose',
         },
+        'employee_file': {
+            'level': 'INFO',  # Set the minimum level for this log file
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(MEDIA_ROOT, 'employee_operations.log'), # New log file path
+            'formatter': 'verbose', 
+        },
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
@@ -214,6 +227,11 @@ LOGGING = {
             'handlers': ['file', 'console'], # You can choose to log to file, console, or both
             'level': 'INFO',
             'propagate': False,
+        },
+        'employee_operations': {
+            'handlers': ['employee_file', 'console'], # Log to the new file and console
+            'level': 'INFO', 
+            'propagate': False, 
         },
     },
 }

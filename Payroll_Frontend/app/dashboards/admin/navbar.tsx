@@ -78,6 +78,9 @@ export default function Navbar() {
           <Pressable onPress={() => handleNavigate("/dashboards/admin/my_payslips")}>
             <Text style={styles.sidebarItem}>My Payslips</Text>
           </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/backup_restore")}>
+            <Text style={[styles.sidebarItem, styles.backupItem]}>Backup & Restore</Text>
+          </Pressable>
         </View>
       )}
 
@@ -116,6 +119,9 @@ export default function Navbar() {
           </Pressable>
           <Pressable onPress={() => handleNavigate("/dashboards/admin/my_payslips")}>
             <Text style={styles.menuItem}>My Payslips</Text>
+          </Pressable>
+          <Pressable onPress={() => handleNavigate("/dashboards/admin/backup_restore")}>
+            <Text style={[styles.menuItem, styles.backupItem]}>Backup & Restore</Text>
           </Pressable>
         </View>
       )}
@@ -219,5 +225,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#22186F',
     marginBottom: 16,
+  },
+  backupItem: {
+    color: '#5e5abf', 
+    fontWeight: 'bold',
   },
 });

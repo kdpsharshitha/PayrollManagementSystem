@@ -764,176 +764,153 @@ if (nonWorkingCount === gapDays) {
   const endInputRef = useRef<HTMLInputElement>(null);
 
   // ─── JSX ───────────────────────────────────────────────────────────────────────
-  return (
-    <View style={styles.container}>
+ return (
+  <View style={styles.container}>
+    {Platform.OS === 'web' ? (
       <View style={styles.contentWrapper}>
-      {/* Leave Balance Summary */}
-      <View style={styles.summaryContainer}>
-        <Text style={styles.summaryTitle}>Leave Balance Summary</Text>
+        {/* Leave Balance Summary */}
+        <View style={styles.summaryContainer}>
+          <Text style={styles.summaryTitle}>Leave Balance Summary</Text>
 
-<View style={styles.summaryItem}>
-  <Text style={styles.summaryText}>This Month’s Paid Leave</Text>
-  <Text style={styles.summaryValue}>{`${paidLeaveThisMonth ? 1 : 0} of 1 day`}</Text>
-</View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryText}>This Month’s Paid Leave</Text>
+            <Text style={styles.summaryValue}>
+              {`${paidLeaveThisMonth ? 1 : 0} of 1 day`}
+            </Text>
+          </View>
 
-<View style={styles.summaryItem}>
-  <Text style={styles.summaryText}>Half‑Day Paid Leave This Month</Text>
-  <Text style={styles.summaryValue}>{`${halfPaidCountThisMonth} of 2 days`}</Text>
-</View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryText}>Half‑Day Paid Leave This Month</Text>
+            <Text style={styles.summaryValue}>
+              {`${halfPaidCountThisMonth} of 2 days`}
+            </Text>
+          </View>
 
-<View style={styles.summaryItem}>
-  <Text style={styles.summaryText}>Paid Leave Balance</Text>
-  <Text style={styles.summaryValue}>{availablePaid}</Text>
-</View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryText}>Paid Leave Balance</Text>
+            <Text style={styles.summaryValue}>{availablePaid}</Text>
+          </View>
 
-<View style={styles.summaryItem}>
-  <Text style={styles.summaryText}>Sick Leave Balance</Text>
-  <Text style={styles.summaryValue}>{availableSick}</Text>
-</View>
-</View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryText}>Sick Leave Balance</Text>
+            <Text style={styles.summaryValue}>{availableSick}</Text>
+          </View>
+        </View>
+
+        {/* Leave Request Form */}
+        <View style={styles.formContainer}>
+          {/* … all of your form JSX (date pickers, pickers, buttons, etc.) … */}
+        </View>
+      </View>
+    ) : (
+      <ScrollView
+        contentContainerStyle={styles.contentWrapper}
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Leave Balance Summary */}
+        <View style={styles.summaryContainer}>
+          <Text style={styles.summaryTitle}>Leave Balance Summary</Text>
+
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryText}>This Month’s Paid Leave</Text>
+            <Text style={styles.summaryValue}>
+              {`${paidLeaveThisMonth ? 1 : 0} of 1 day`}
+            </Text>
+          </View>
+
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryText}>Half‑Day Paid Leave This Month</Text>
+            <Text style={styles.summaryValue}>
+              {`${halfPaidCountThisMonth} of 2 days`}
+            </Text>
+          </View>
+
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryText}>Paid Leave Balance</Text>
+            <Text style={styles.summaryValue}>{availablePaid}</Text>
+          </View>
+
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryText}>Sick Leave Balance</Text>
+            <Text style={styles.summaryValue}>{availableSick}</Text>
+          </View>
+        </View>
 
 
       
      <View style={styles.formContainer}>
       <Text style={styles.heading}>Leave Request</Text>
 {/* ─── Start Date Picker ──────────────────────────────────────────────────── */}
+{/* ─── Start Date Picker ──────────────────────────────────────────────────── */}
 <Text style={styles.label}>Start Date</Text>
 <View style={styles.datePickerContainer}>
-  {Platform.OS === 'web' ? (
-    <>
-      <input
-        ref={startInputRef}
-        type="date"
-        value={startDate}
-        onChange={e => setStartDate(e.target.value)}
-        style={{
-          flex: 1,
-          height: 40,
-          padding: '0 10px',
-          borderRadius: 4,
-          border: '1px solid #999',
-          backgroundColor: '#FFF',
-          boxSizing: 'border-box',
-        }}
-      />
-      <button
-        onClick={() => startInputRef.current?.showPicker?.() /* some browsers support showPicker() */}
-        style={{
-          marginLeft: 8,
-          padding: 6,
-          backgroundColor: '#FFF',
-          border: '1px solid #999',
-          borderRadius: 4,
-          cursor: 'pointer',
-        }}
-      >
-        <Ionicons name="calendar-outline" size={24} color="#22186F" />
-      </button>
-    </>
-  ) : (
-    <>
-      <Pressable
-        style={styles.datePicker}
-        onPress={() => setShowStartPicker(true)}
-      >
-        <Text style={{ color: startDate ? '#000' : '#999' }}>
-          {formatDate(startDate)}
-        </Text>
-      </Pressable>
-      <TouchableOpacity
-        onPress={() => setShowStartPicker(true)}
-        style={styles.calendarIcon}
-      >
-        <Ionicons name="calendar-outline" size={24} color="#22186F" />
-      </TouchableOpacity>
-      {showStartPicker && (
-        <DateTimePicker
-          value={startDate ? new Date(startDate) : new Date()}
-          mode="date"
-          display="default"
-          onChange={(e, d) => {
-            setShowStartPicker(false);
-            if (e.type === 'set' && d) {
-              setStartDate(d.toISOString().slice(0, 10));
-            }
-          }}
-        />
-      )}
-    </>
+  <Pressable
+    style={styles.datePicker}
+    onPress={() => setShowStartPicker(true)}
+  >
+    <Text style={{ color: startDate ? '#000' : '#999' }}>
+      {formatDate(startDate)}
+    </Text>
+  </Pressable>
+  <TouchableOpacity
+    onPress={() => setShowStartPicker(true)}
+    style={styles.calendarIcon}
+  >
+    <Ionicons name="calendar-outline" size={24} color="#22186F" />
+  </TouchableOpacity>
+  {showStartPicker && (
+    <DateTimePicker
+      value={startDate ? new Date(startDate) : new Date()}
+      mode="date"
+      display="default"
+      onChange={(e, d) => {
+        setShowStartPicker(false);
+        if (e.type === 'set' && d) {
+          setStartDate(d.toISOString().slice(0, 10));
+        }
+      }}
+    />
   )}
 </View>
+
 
 {/* ─── End Date Picker ────────────────────────────────────────────────────── */}
 <Text style={styles.label}>End Date</Text>
 <View style={styles.datePickerContainer}>
-  {Platform.OS === 'web' ? (
-    <>
-      <input
-        ref={endInputRef}
-        type="date"
-        value={endDate}
-        onChange={e => setEndDate(e.target.value)}
-        style={{
-          flex: 1,
-          height: 40,
-          padding: '0 10px',
-          borderRadius: 4,
-          border: '1px solid #999',
-          backgroundColor: '#FFF',
-          boxSizing: 'border-box',
-        }}
-      />
-      <button
-        onClick={() => endInputRef.current?.showPicker?.()}
-        style={{
-          marginLeft: 8,
-          padding: 6,
-          backgroundColor: '#FFF',
-          border: '1px solid #999',
-          borderRadius: 4,
-          cursor: 'pointer',
-        }}
-      >
-        <Ionicons name="calendar-outline" size={24} color="#22186F" />
-      </button>
-    </>
-  ) : (
-    <>
-      <Pressable
-        style={styles.datePicker}
-        onPress={() => setShowEndPicker(true)}
-      >
-        <Text style={{ color: endDate ? '#000' : '#999' }}>
-          {formatDate(endDate)}
-        </Text>
-      </Pressable>
-      <TouchableOpacity
-        onPress={() => setShowEndPicker(true)}
-        style={styles.calendarIcon}
-      >
-        <Ionicons name="calendar-outline" size={24} color="#22186F" />
-      </TouchableOpacity>
-      {showEndPicker && (
-        <DateTimePicker
-          value={endDate ? new Date(endDate) : new Date()}
-          mode="date"
-          display="default"
-          onChange={(e, d) => {
-            setShowEndPicker(false);
-            if (e.type === 'set' && d) {
-              setEndDate(d.toISOString().slice(0, 10));
-            }
-          }}
-        />
-      )}
-    </>
+  <Pressable
+    style={styles.datePicker}
+    onPress={() => setShowEndPicker(true)}
+  >
+    <Text style={{ color: endDate ? '#000' : '#999' }}>
+      {formatDate(endDate)}
+    </Text>
+  </Pressable>
+  <TouchableOpacity
+    onPress={() => setShowEndPicker(true)}
+    style={styles.calendarIcon}
+  >
+    <Ionicons name="calendar-outline" size={24} color="#22186F" />
+  </TouchableOpacity>
+  {showEndPicker && (
+    <DateTimePicker
+      value={endDate ? new Date(endDate) : new Date()}
+      mode="date"
+      display="default"
+      onChange={(e, d) => {
+        setShowEndPicker(false);
+        if (e.type === 'set' && d) {
+          setEndDate(d.toISOString().slice(0, 10));
+        }
+      }}
+    />
   )}
 </View>
 
       {/* ─── Leave Type Picker ──────────────────────────────────────────────────── */}
       <Text style={styles.label}>Leave Type</Text>
       <View style={styles.pickerContainer}>
-        <Picker selectedValue={leaveType} onValueChange={setLeaveType} style={{height: '100%',}} > 
+        <Picker selectedValue={leaveType} onValueChange={setLeaveType} style={{height: '100%',width: '100%'}} > 
           <Picker.Item
             label="Paid Leave"
             value="paid"
@@ -1051,7 +1028,10 @@ if (nonWorkingCount === gapDays) {
         <Text style={styles.buttonText}>Submit Request</Text>
       </TouchableOpacity>
       </View>
-     </View>
+      
+     </ScrollView>
+     
+    )}
     </View>
   );
 };
@@ -1167,12 +1147,14 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   pickerContainer: {
-    height: 48,              // makes your dropdown taller
+    height: 55,              // makes your dropdown taller
     justifyContent: 'center',// vertically center the selected value
     borderWidth: 1,
     borderColor: '#999',
     borderRadius: 4,
     marginTop: 4,
+    width: '100%',
+    paddingHorizontal: 8,
 
     // only needed to clip the <select> on web; has no effect on native
     ...Platform.select({

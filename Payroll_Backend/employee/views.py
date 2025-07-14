@@ -7,10 +7,52 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+import logging
 
+employee_logger = logging.getLogger('employee_operations')
 class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.all()
     serializer_class = EmployeeSerializer
+
+    def perform_create(self, serializer):
+        employee = serializer.save()
+        user = self.request.user
+        employee_logger.info(
+            f"New employee added: ID:{employee.id}, Name:{employee.name}, "
+            f"Email:{employee.email}, Role:{employee.role}, Added by: {user.id if user.is_authenticated else 'Anonymous'}"
+        )
+
+    def perform_update(self, serializer):
+        instance = self.get_object()  # Old instance before update
+        old_data = EmployeeSerializer(instance).data 
+        user = self.request.user
+
+        updated_employee = serializer.save()
+        new_data = EmployeeSerializer(updated_employee).data
+        # Compare old and new fields
+        changes = []
+        for field in new_data:
+            if old_data.get(field) != new_data.get(field):
+                changes.append(
+                    f"{field}: '{old_data.get(field)}' to '{new_data.get(field)}'"
+                )
+
+        if changes:
+            change_log = "; ".join(changes)
+            employee_logger.info(
+                f"Employee updated: ID:{updated_employee.id}, Updated by:{user.id}. Changes: {change_log}"
+            )
+        
+
+    def perform_destroy(self, instance):
+        user = self.request.user
+        employee_logger.info(
+            f"Employee deleted: ID:{instance.id}, Name={instance.name}, "
+            f"Email:{instance.email}, Role:{instance.role}, Deleted by:{user.id if user.is_authenticated else 'Anonymous'}"
+        )
+        instance.delete()
+
+    
 
 # Helper function to generate tokens
 def get_tokens_for_user(user):
@@ -55,7 +97,6 @@ def get_logged_in_employee(request):
     data = EmployeeSerializer(user).data
     data["is_superuser"] = user.is_superuser
     return Response(data)
-
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])

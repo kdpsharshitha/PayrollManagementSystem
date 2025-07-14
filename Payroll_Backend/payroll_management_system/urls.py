@@ -25,7 +25,8 @@ urlpatterns = [
     path('api/attendance/', include('attendance.urls')),
     path('api/leavedetails/', include('leavedetails.urls')),
     path('api/payroll/', include('payroll.urls')),
-    path('api/leave-requests/', include('leave_requests.urls'))
+    path('api/leave-requests/', include('leave_requests.urls')),
+    path('api/backup_restore/', include('backup_restore.urls'))
 ]
 
 if settings.DEBUG:

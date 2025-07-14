@@ -47,7 +47,7 @@ export default function Navbar() {
       {isWeb && menuVisible && (
         <View style={[styles.sidebar, { height: windowHeight - 75 }]}>
           <Pressable onPress={() => handleNavigate("/dashboards/manager/view_mng_emp_details")}>
-            <Text style={styles.sidebarItem}>View & Manage Employee Details</Text>
+            <Text style={styles.sidebarItem}>View Employee Details</Text>
           </Pressable>
           <Pressable onPress={() => handleNavigate("/dashboards/manager/emp_leave_requests")}>
             <Text style={styles.sidebarItem}>Employee Leave Requests</Text>
@@ -83,7 +83,7 @@ export default function Navbar() {
       {!isWeb && menuVisible && (
         <View style={styles.menu}>
           <Pressable onPress={() => handleNavigate("/dashboards/manager/view_mng_emp_details")}>
-            <Text style={styles.menuItem}>View & Manage Employee Details</Text>
+            <Text style={styles.menuItem}>View Employee Details</Text>
           </Pressable>
           <Pressable onPress={() => handleNavigate("/dashboards/manager/emp_leave_requests")}>
             <Text style={styles.menuItem}>Employee Leave Requests</Text>

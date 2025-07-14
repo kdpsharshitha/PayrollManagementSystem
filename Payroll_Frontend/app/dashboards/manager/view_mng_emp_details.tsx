@@ -126,7 +126,7 @@ export default function EmployeeManagementScreen() {
           <Ionicons name="eye" size={15} color="white" />
         </TouchableOpacity>
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           onPress={() =>
             router.push({
               pathname: "/dashboards/manager/edit_emp/[id]",
@@ -136,7 +136,7 @@ export default function EmployeeManagementScreen() {
           style={[styles.button, styles.editButton]}
         >
           <Feather name="edit" size={15} color="white" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
       </View>
     </View>
