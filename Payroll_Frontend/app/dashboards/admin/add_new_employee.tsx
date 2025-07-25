@@ -68,6 +68,14 @@ const AddEmployeeScreen = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [employees, setEmployees] = useState<{ id: string; name: string; email: string }[]>([]);
 
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -105,13 +113,7 @@ const AddEmployeeScreen = () => {
       supervisor_email,
     } = formData;
 
-    const showAlert = (title: string, message: string) => {
-      if (Platform.OS === "web") {
-        window.alert(`${title}: ${message}`);
-      } else {
-        Alert.alert(title, message);
-      }
-    };
+    
 
     if (!id || id.length !== 6) {
       showAlert("Validation Error", "Employee ID must be 6 characters.");
@@ -123,7 +125,7 @@ const AddEmployeeScreen = () => {
       return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!email || !emailRegex.test(email)) {
       showAlert("Validation Error", "Please enter a valid email address.");
       return false;
@@ -134,7 +136,7 @@ const AddEmployeeScreen = () => {
       return false;
     }
 
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    const panRegex = /^[A-Z]{5}\d{4}[A-Z]$/;
     if (!pan_no || !panRegex.test(pan_no)) {
       showAlert("Validation Error", "Invalid PAN number format.");
       return false;
@@ -197,14 +199,6 @@ const AddEmployeeScreen = () => {
   const handleSubmit = async () => {
     
     if (!validateForm()) return;
-
-    const showAlert = (title: string, message: string) => {
-      if (Platform.OS === "web") {
-        window.alert(`${title}: ${message}`);
-      } else {
-        Alert.alert(title, message);
-      }
-    };
 
     try {
 
@@ -436,12 +430,12 @@ const AddEmployeeScreen = () => {
             console.log("Supervisor selected:", value);
             const selected = employees.find((emp) => emp.id === value.split("-")[0]);
             handleChange("supervisor", value);
-            handleChange("supervisor_email", selected?.email || "");
+            handleChange("supervisor_email", selected?.email ?? "");
           }}
           style={styles.picker}
         >
           <Picker.Item label="---Select Supervisor---" value="" enabled={false}/>
-          {employees.sort((a, b) => a.id.localeCompare(b.id)).map((emp) => (
+          {employees.toSorted((a, b) => a.id.localeCompare(b.id)).map((emp) => (
             <Picker.Item key={emp.id} label={`${emp.name} (${emp.id})`} value={`${emp.id}-${emp.name}`} />
           ))}
         </Picker>

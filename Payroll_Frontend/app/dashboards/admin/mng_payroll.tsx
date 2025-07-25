@@ -223,7 +223,7 @@ const MngPayrollPage = () => {
       if (!response.ok) {
         const errorData = await response.json();
         // Check if the backend sent a specific error message
-        if (errorData && errorData.error) {
+        if (errorData?.error) {
           setErrorMessage(errorData.error); // Set the error message to display
         } else {
           setErrorMessage(errorData?.detail || 'Failed to generate payroll'); // Fallback error

@@ -8,8 +8,10 @@ import os
 from django.conf import settings
 from datetime import datetime
 from rest_framework.parsers import MultiPartParser, FormParser
+from django.views.decorators.http import require_POST
 
 
+@require_POST
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def backup_view(request):
@@ -24,6 +26,7 @@ def backup_view(request):
     response['Content-Disposition'] = f'attachment; filename={filename}'
     return response
 
+@require_POST
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])

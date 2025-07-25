@@ -1,0 +1,12 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.1
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  SNYK-PYTHON-DJANGORESTFRAMEWORKSIMPLEJWT-6450220:
+    - '*':
+        reason: >-
+          No patch available; no active exploit; used safely in default
+          configuration
+        expires: 2025-12-31T00:00:00.000Z
+        created: 2025-07-23T10:29:17.853Z
+patch: {}

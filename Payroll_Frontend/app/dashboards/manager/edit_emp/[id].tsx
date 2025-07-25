@@ -12,10 +12,8 @@ import {
   Platform,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-//import * as SecureStore from "expo-secure-store";
 import { getAccessToken } from "../../../auth/index";
 import { BASE_URL } from "../../../../config";
 
@@ -46,7 +44,6 @@ const EditEmployeeScreen = () => {
   const router = useRouter();
   const [formData, setFormData] = useState<FormData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [employees, setEmployees] = useState<{ id: string; name: string; email: string }[]>([]);
   
   const showAlert = (title: string, message: string) => {
@@ -120,7 +117,7 @@ const EditEmployeeScreen = () => {
 
     const phoneRegex = /^\d{10}$/;
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
     if (!formData.name.trim()) {
       showAlert("Validation Error", "Name is required.");
@@ -202,14 +199,7 @@ const EditEmployeeScreen = () => {
     }
   };
 
-  const formatDate = (date: Date | null) =>
-    date ? `${date.getDate()}-${date.getMonth() + 1}-${date.getFullYear()}` : "Select a date";
-
-  const formatDateForWebInput = (date: Date | null) => {
-    if (!date) return "";
-    return date.toISOString().split("T")[0];
-  };
-
+  
   if (loading || !formData) {
     return <ActivityIndicator style={{ flex: 1 }} size="large" />;
   }
@@ -306,7 +296,7 @@ const EditEmployeeScreen = () => {
         >
           <Picker.Item label="---Select Supervisor---" value="" enabled={false} />
           {employees
-            .sort((a, b) => a.id.localeCompare(b.id)) 
+            .toSorted((a, b) => a.id.localeCompare(b.id)) 
             .map((emp) => (
               <Picker.Item
                 key={emp.id}

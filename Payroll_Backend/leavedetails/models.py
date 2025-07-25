@@ -27,7 +27,7 @@ class LeaveDetails(models.Model):
     total_paid_leaves_left = models.DecimalField(max_digits=5, decimal_places=2, default=9)   # Typically max 9 per year
     total_sick_leaves_left = models.DecimalField(max_digits=5, decimal_places=2, default=2)   # Typically max 2 per year
 
-
+    
     class Meta:
         unique_together = ('employee', 'month')
 
@@ -39,6 +39,9 @@ class LeaveDetails(models.Model):
         _, num_days = calendar.monthrange(year, month)
         first_day = datetime(year, month, 1).date()
         last_day = datetime(year, month, num_days).date()
+
+        STATUS_PAID_LEAVE = 'Paid Leave'
+        STATUS_UNPAID_LEAVE = 'UnPaid Leave'
 
         PAID_LEAVE_ENTITLEMENT = 9
         join_date = self.employee.date_joined
@@ -62,6 +65,7 @@ class LeaveDetails(models.Model):
         attendance_map = {att.date: att.status for att in records}
 
         sandwich_holidays_unpaidleaves = 0
+        
 
         holiday_block = []
 
@@ -83,7 +87,7 @@ class LeaveDetails(models.Model):
                         prev_status = attendance_map.get(prev_date)
                         next_status = attendance_map.get(next_date)
 
-                        if prev_status in ['Paid Leave','UnPaid Leave'] and next_status in ['Paid Leave','UnPaid Leave']:
+                        if prev_status in [STATUS_PAID_LEAVE,STATUS_UNPAID_LEAVE] and next_status in [STATUS_PAID_LEAVE,STATUS_UNPAID_LEAVE]:
                             sandwich_holidays_unpaidleaves += len(holiday_block)
 
                     holiday_block = []
@@ -100,7 +104,7 @@ class LeaveDetails(models.Model):
                 prev_status = attendance_map.get(prev_date)
                 next_status = attendance_map.get(next_date)
 
-                if prev_status in ['Paid Leave','UnPaid Leave'] and next_status in ['Paid Leave','UnPaid Leave']:
+                if prev_status in [STATUS_PAID_LEAVE,STATUS_UNPAID_LEAVE] and next_status in [STATUS_PAID_LEAVE,STATUS_UNPAID_LEAVE]:
                     sandwich_holidays_unpaidleaves += len(holiday_block)
 
 
@@ -115,10 +119,7 @@ class LeaveDetails(models.Model):
         HalfUnPaidLeaves = records.filter(status='Half UnPaid Leave').count()
         sick_leaves = records.filter(status='Sick Leave').count()
         holidays = records.filter(status='Holiday').count()
-        # leaves = records.filter(status='Leave').count()
-        # half_leaves = records.filter(status='Half Leave').count()
-        # total_leaves = Decimal(leaves) + Decimal('0.5') * Decimal(half_leaves)
-
+        
         self.working_days = num_days - holidays
         self.paid_leaves = Decimal(PaidLeaves) + Decimal('0.5') * Decimal(HalfPaidLeaves)
         self.applied_unpaid_leaves = Decimal(UnPaidLeaves) + Decimal('0.5') * Decimal(HalfUnPaidLeaves)
@@ -135,16 +136,6 @@ class LeaveDetails(models.Model):
             month__lt=self.month
         ).order_by('-month').first()
 
-        # Set initial leave balances
-        # if prev_record:
-        #     paid_leave_balance = max(Decimal('0'), prev_record.total_paid_leaves_left)
-        # else:
-        #     paid_leave_balance = Decimal('9')
-        
-        # monthly_paid_leave_limit = Decimal('1.0')
-        # self.paid_leaves = min(total_leaves - unpaid_due_to_clubbing, paid_leave_balance, monthly_paid_leave_limit)
-        # self.unpaid_leaves = max(Decimal('0'), total_leaves - self.paid_leaves + sandwich_holidays_unpaidleaves)
-        # self.total_leaves_taken = self.sick_leaves + total_leaves + sandwich_holidays_unpaidleaves
         
         if prev_record:
             self.total_paid_leaves_left = max(Decimal('0'), prev_record.total_paid_leaves_left - self.paid_leaves)

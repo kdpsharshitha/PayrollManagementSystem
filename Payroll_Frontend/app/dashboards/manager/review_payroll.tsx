@@ -183,8 +183,6 @@ const GenPayslipPage = () => {
         } else {
           const fileUri = FileSystem.documentDirectory + `payslip_${employee_id}_${month}.pdf`;
           await FileSystem.writeAsStringAsync(fileUri, pdfData, { encoding: FileSystem.EncodingType.Base64 }); 
-          //showAlert('Success', `${backendMessage}\n\nYou will now be prompted to download or share the Payslip.`); 
-          //await Sharing.shareAsync(fileUri);
           Alert.alert(
             'Payslip Ready',
             `${backendMessage}\n\nWould you like to Download/Share ?`,

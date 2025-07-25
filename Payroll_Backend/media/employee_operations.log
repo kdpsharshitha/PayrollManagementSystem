@@ -1,3 +1,12 @@
 INFO 2025-07-13 21:10:35,746 views New employee added: ID:100105, Name:check, Email:check@gmail.com, Role:employee, Added by: 100101
 INFO 2025-07-14 12:12:54,937 views Employee updated: ID:100105, Updated by:100101. Changes: address: 'df' to 'dfh'
 INFO 2025-07-14 12:14:56,184 views Employee deleted: ID:100105, Name=check, Email:check@gmail.com, Role:employee, Deleted by:100101
+INFO 2025-07-14 14:28:03,478 views New employee added: ID:100106, Name:check2, Email:check2@gmail.com, Role:employee, Added by: 100101
+INFO 2025-07-14 14:28:35,592 views Employee updated: ID:100106, Updated by:100101. Changes: pay_structure: 'fixed' to 'variable'
+INFO 2025-07-14 15:28:10,558 views Employee deleted: ID:100106, Name=check2, Email:check2@gmail.com, Role:employee, Deleted by:100101
+INFO 2025-07-24 10:46:10,514 views New employee added: ID:100107, Name:samp, Email:samp@gmail.com, Role:employee, Added by: 100101
+INFO 2025-07-24 10:46:22,183 views Employee deleted: ID:100107, Name=samp, Email:samp@gmail.com, Role:employee, Deleted by:100101
+INFO 2025-07-24 17:02:01,784 views Employee updated: ID:100106, Updated by:100101. Changes: fee_per_month: '40000.00' to '50000.00'
+INFO 2025-07-25 16:40:06,620 views New employee added: ID:100107, Name:samp, Email:s@g.com, Role:employee, Added by: 100101
+INFO 2025-07-25 16:40:50,626 views Employee deleted: ID:100107, Name=samp, Email:s@g.com, Role:employee, Deleted by:100101
+INFO 2025-07-25 17:19:58,095 views Employee updated: ID:100105, Updated by:100101. Changes: fee_per_month: '12345.00' to '42345.00'

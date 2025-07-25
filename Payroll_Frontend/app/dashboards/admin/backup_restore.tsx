@@ -10,7 +10,7 @@ import { BASE_URL } from "../../../config";
 
 export default function BackupRestoreScreen() {
   const [loading, setLoading] = useState(false);
-  const [rloading, setrLoading] = useState(false);
+  const [rloading, setrloading] = useState(false);
 
   const showAlert = (title: string, message: string) => {
         if (Platform.OS === "web") {
@@ -49,19 +49,18 @@ export default function BackupRestoreScreen() {
         console.log('Frontend received Content-Disposition header:', contentDisposition);
         if (contentDisposition) {
             const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
-            if (filenameMatch && filenameMatch[1]) {
+            if (filenameMatch?.[1]) {
             filename = filenameMatch[1];
             } else {
             // Fallback for cases where filename is not quoted (less common but possible)
             const nonQuotedFilenameMatch = contentDisposition.match(/filename=([^;]+)/);
-            if (nonQuotedFilenameMatch && nonQuotedFilenameMatch[1]) {
+            if (nonQuotedFilenameMatch?.[1]) {
                 filename = nonQuotedFilenameMatch[1].trim();
             }
             }
         }
         console.log('Detected filename for download:', filename);
         a.download = filename; 
-        //a.download = 'backup.json';
         document.body.appendChild(a);
         a.click();
         a.remove(); // Clean up the element
@@ -96,13 +95,13 @@ export default function BackupRestoreScreen() {
 
   const handleRestore = async () => {
     try {
-        setrLoading(true);
+        setrloading(true);
         const token = await getAccessToken();
 
         const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
        
         if (result.canceled || !result.assets?.[0]) {
-        setrLoading(false);
+        setrloading(false);
         return;
         }
 
@@ -157,7 +156,7 @@ export default function BackupRestoreScreen() {
         console.error('Restore: An error occurred:', err);
         showAlert('Error', err.message);
     } finally {
-        setrLoading(false);
+        setrloading(false);
         console.log('Restore: Loading state reset.');
     }
   };

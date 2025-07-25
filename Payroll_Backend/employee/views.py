@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 import logging
+from django.views.decorators.http import require_POST, require_GET
 
 employee_logger = logging.getLogger('employee_operations')
 class EmployeeViewSet(viewsets.ModelViewSet):
@@ -64,6 +65,7 @@ def get_tokens_for_user(user):
         "gmail": user.email,   # Replaced the custom user_id with email (labeled as gmail)
     }
 
+@require_POST
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @authentication_classes([])  # Disable authentication for login
@@ -90,6 +92,7 @@ def login(request):
         status=status.HTTP_400_BAD_REQUEST
     )
 
+@require_GET
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_logged_in_employee(request):
@@ -98,6 +101,7 @@ def get_logged_in_employee(request):
     data["is_superuser"] = user.is_superuser
     return Response(data)
 
+@require_GET
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def view_profile(request):

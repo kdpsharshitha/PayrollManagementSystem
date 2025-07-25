@@ -34,7 +34,7 @@ export default function ViewProfileScreen() {
   const [profile, setProfile] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const BASE_URL = "http://192.168.1.7:8000/api/employee";
+  const BASE_URL = "http://192.168.1.4:8000/api/employee";
 
   useEffect(() => {
     async function loadProfile() {

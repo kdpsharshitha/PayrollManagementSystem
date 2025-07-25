@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, Platform, Dimensions, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, Platform, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter } from "expo-router";
@@ -12,14 +12,6 @@ export default function Navbar() {
 
   const isWeb = Platform.OS === "web";
   const windowHeight = Dimensions.get('window').height;
-
-  const showAlert = (title: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}: ${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
-  };
 
   const handleNavigate = (path: string) => {
     setMenuVisible(false);

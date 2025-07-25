@@ -4,7 +4,7 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';     // default import
 import { Storage } from './storage';  // adjust the path
 
-const BASE_URL = 'http://192.168.1.7:8000/api/employee';
+const BASE_URL = 'http://192.168.1.4:8000/api/employee';
 
 interface JwtPayload {
   exp: number;

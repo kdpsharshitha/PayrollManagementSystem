@@ -27,6 +27,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 from decimal import Decimal
 import logging
+from django.views.decorators.http import require_GET
 
 class PayrollViewSet(viewsets.ModelViewSet):
     queryset = Payroll.objects.all()
@@ -38,10 +39,7 @@ class GeneratePayrollAPIView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         payroll_logger.info("Received request to generate/update payroll.")
-        # print("Request content-type:", request.content_type)
-        # print("FILES:", request.FILES)
-        # print("DATA:", request.data)
-
+        
         employee_id = request.data.get('employee_id')
         month_str = request.data.get('month')  # e.g., '2025-05'
         perform_category = request.data.get('perform_category')
@@ -68,7 +66,6 @@ class GeneratePayrollAPIView(APIView):
                 payroll, created = Payroll.objects.get_or_create(employee=employee, month=month)
 
                 # Store old values for detailed logging if updating
-                old_perform_category = payroll.perform_category
                 old_reimbursement = payroll.reimbursement
                 old_reimbursement_proof_name = os.path.basename(payroll.reimbursement_proof.name) if payroll.reimbursement_proof else None
 
@@ -394,7 +391,7 @@ class GeneratePayslipPDFView(APIView):
             with open(file_path, 'wb') as f:
                 f.write(buffer.getvalue()) # Write the PDF content to the file
             print(f"Payslip saved to: {file_path}") # Log for confirmation
-            file_saved_message = f"Payslip saved to payslips folder." + archive_message
+            file_saved_message = "Payslip saved to payslips folder." + archive_message
         except IOError as e:
             print(f"Error saving payslip to file: {e}")
             file_saved_message = f"Error saving payslip to folder: {str(e)}" + archive_message
@@ -668,7 +665,8 @@ class MyPayslipsAPIView(APIView):
             for p in payslips
         ]
         return Response(data)
-    
+
+@require_GET    
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def monthly_employees_view(request):

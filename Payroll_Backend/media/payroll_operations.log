@@ -18,3 +18,23 @@ INFO 2025-07-14 12:13:51,324 views Received request to generate/update payroll.
 INFO 2025-07-14 12:13:51,390 views Payroll UPDATED for employee: 100101 - Harshitha for month: 2025-04 by 100101.
 INFO 2025-07-14 12:13:51,398 views Payroll computation triggered and saved for employee 100101 for month 2025-04.
 
+INFO 2025-07-24 17:03:00,465 views Received request to generate/update payroll.
+INFO 2025-07-24 17:03:00,493 views Payroll UPDATED for employee: 100104 - Praghna for month: 2025-04 by 100101.
+INFO 2025-07-24 17:03:00,497 views Payroll computation triggered and saved for employee 100104 for month 2025-04.
+
+INFO 2025-07-25 16:43:04,151 views Received request to generate/update payroll.
+INFO 2025-07-25 16:43:04,222 views Payroll GENERATED for employee: Harshitha (ID: 100101) for month: 2025-05 by 100101. Initial perform_category: 1, reimbursement: 0. No reimbursement proof expected/provided (reimbursement is zero).
+INFO 2025-07-25 16:43:04,226 views Payroll computation triggered and saved for employee 100101 for month 2025-05.
+
+INFO 2025-07-25 16:43:04,307 views Received request to generate/update payroll.
+INFO 2025-07-25 16:43:04,399 views Payroll GENERATED for employee: Karthik (ID: 100102) for month: 2025-05 by 100101. Initial perform_category: 2, reimbursement: 0. No reimbursement proof expected/provided (reimbursement is zero).
+INFO 2025-07-25 16:43:04,402 views Payroll computation triggered and saved for employee 100102 for month 2025-05.
+
+INFO 2025-07-25 16:43:04,464 views Received request to generate/update payroll.
+INFO 2025-07-25 16:43:04,518 views Payroll GENERATED for employee: Abhi (ID: 100103) for month: 2025-05 by 100101. Initial perform_category: 2, reimbursement: 0. No reimbursement proof expected/provided (reimbursement is zero).
+INFO 2025-07-25 16:43:04,524 views Payroll computation triggered and saved for employee 100103 for month 2025-05.
+
+INFO 2025-07-25 16:43:04,622 views Received request to generate/update payroll.
+INFO 2025-07-25 16:43:04,687 views Payroll GENERATED for employee: Praghna (ID: 100104) for month: 2025-05 by 100101. Initial perform_category: NA, reimbursement: 0. No reimbursement proof expected/provided (reimbursement is zero).
+INFO 2025-07-25 16:43:04,692 views Payroll computation triggered and saved for employee 100104 for month 2025-05.
+

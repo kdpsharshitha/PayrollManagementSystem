@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, StyleSheet, ScrollView, Alert, TouchableOpacity, Platform } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-//import * as SecureStore from "expo-secure-store";
 import { getAccessToken } from "../../../auth/index";
 import { BASE_URL } from "../../../../config";
 
